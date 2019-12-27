@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow xmlns:mx="http://www.adobe.com/2006/mxml"
+                xmlns:torgtaitai="*" 
+                width="750" height="500"
+                title="{Language.s.initCardWindow}" 
+                showCloseButton="true"
+                close="PopUpManager.removePopUp(this)"
+                >
+  
+  <mx:Box height="100%" width="100%">
+    
+    <mx:Box height="{this.height - 90}" 
+            width="100%"
+            verticalGap="0"
+            horizontalGap="0"
+            paddingTop="0"
+            paddingBottom="0"
+            >
+      
+      <mx:HBox id="trumpBox" height="30" width="100%">
+        <mx:CheckBox id="trump" label="{Language.s.trump}" selected="false" change="changeTrumpCheck()" />
+        <mx:Label text="{Language.s.deckCouunt}" />
+        <mx:NumericStepper id="deckCount" minimum="1" maximum="10" value="1" enabled="false" />
+        <mx:Label text="{Language.s.jorkerCount}" />
+        <mx:NumericStepper id="jorkerCount" minimum="0" maximum="10" value="0" enabled="false" />
+        <mx:CheckBox id="trumpSizeChangedCheck" label="{trumpSizeChanged + 'サイズ'}" selected="false" visible="{trumpSizeChanged != null}"/>
+      </mx:HBox>
+      
+      <mx:Box id="checkBoxPlace" width="100%" />
+      
+      <mx:HBox height="30" width="100%">
+        <mx:CheckBox id="randomDungeonTrumpCheck" label="{Language.s.randomDungeonTrump}" selected="false" change="changeRandomDungeonTrumpCheck()" />
+      </mx:HBox>
+      
+      <mx:HBox id="randomDungeonTrumpBox" height="30" width="100%">
+        <mx:Spacer width="20" />
+        <mx:Label text="{Language.s.cardCountIncludeAce}" />
+        <mx:NumericStepper id="randomDungeonCardCount" minimum="1" maximum="{49 + randomDungeonJorkerCount.value}" value="1" enabled="false" />
+        <mx:Label text="{Language.s.jorkerCount}" />
+        <mx:NumericStepper id="randomDungeonJorkerCount" minimum="0" maximum="3" value="0" enabled="false" />
+      </mx:HBox>
+      
+    </mx:Box>
+    
+    <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle">
+      <mx:Button id="executeButton" label="{Language.s.initWithShuffle}" click="execute()" enabled="true" />
+      <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+    </mx:HBox>
+    
+    <mx:Spacer height="100%" width="100%" />
+  </mx:Box>
+  
+  <mx:Script>
+    <![CDATA[
+    
+    [Bindable]
+    private var trumpSizeChanged:String = ""; //"1x1";
+    
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.events.FlexEvent;
+    import mx.controls.Alert;
+    import mx.events.CloseEvent;
+    
+    static private var cardInfos:Array = null;
+    private var checkBoxes:Object = new Object();
+    static private var guiInputSender:GuiInputSender;
+    
+    override protected function setup():void {
+        guiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+        
+        initCardTypes();
+    }
+    
+    static private var cardTypeTrump:String = "trump";
+    static private var randomDungeonTrump:String = "randomDungeonTrump";
+    
+    private var groupBoxes:Object = new Object();
+    
+    static private function isTrump(cardType:String):Boolean {
+        return (cardType.indexOf(cardTypeTrump) == 0);
+    }
+    
+    static public function setCardInfos(infos:Array):void {
+        cardInfos = Utils.clone(infos);
+    }
+    
+    static public function getCardName(mountName:String):String {
+        var info:Object = getCardInfo(mountName);
+        
+        var cardName:String = info.title;
+        
+        if( cardName == null ) {
+            cardName = "";
+        }
+        
+        return cardName;
+    }
+    
+    static private function getCardInfo(cardType:String):Object {
+        for(var i:int = 0 ; i < cardInfos.length ; i++) {
+            var cardInfo:Object = cardInfos[i];
+            if( cardInfo.type == cardType ) {
+                return cardInfo;
+            }
+        }
+        return new Object();
+    }
+    
+    private function initCardTypes():void {
+        var groupCounts:Object = getCardGroupCounts(cardInfos);
+
+    
+        for(var i:int = 0 ; i < cardInfos.length ; i++) {
+            var cardInfo:Object = cardInfos[i];
+            var cardType:String = cardInfo.type;
+            
+            if( isTrump(cardType) ) {
+                initCardSizeInfo(cardType);
+                continue;
+            }
+            
+            if( cardType == randomDungeonTrump ) {
+                continue;
+            }
+            
+            var checkBox:CheckBox = new CheckBox();
+            checkBox.id = cardType;
+            
+            checkBoxes[cardType] = checkBox;
+            
+            if( isGroupCardType(cardType, groupCounts) ) {
+                checkBox.label = getGroupExclideCardName(cardType);
+                addGropBox(cardType, checkBox);
+            } else {
+                checkBox.label = getCardName(cardType);
+                checkBoxPlace.addChild( checkBox );
+            }
+        }
+    }
+    
+    private function getCardGroupCounts(infos:Array):Object {
+        var groupCounts:Object = new Object();
+        
+        for(var i:int = 0 ; i < cardInfos.length ; i++) {
+            var cardInfo:Object = cardInfos[i];
+            var cardType:String = cardInfo.type;
+            var groupName:String = getCardNameGroup(cardType);
+            
+            groupCounts[groupName] ||= 0;
+            groupCounts[groupName] += 1;
+        }
+        
+        return groupCounts;
+    }
+    
+    private function initCardSizeInfo(cardType:String):void {
+        var result:Object = Card.getCardSizeInfoCardType(cardType);
+        if( result == null ) {
+            return;
+        }
+        
+        trumpSizeChanged = result.text;
+    }
+    
+    private function isGroupCardType(cardType:String, groupCounts:Object):Boolean {
+        var groupName:String = getCardNameGroup(cardType);
+        var count:int = groupCounts[groupName];
+        return ( count > 1 );
+    }
+    
+    private function addGropBox(cardType:String, checkBox:CheckBox):void {
+        var group:String = getCardNameGroup(cardType);
+        
+        var box:HBox = this.groupBoxes[group];
+        
+        if( box == null ) {
+            box = createGropBox(cardType);
+            this.groupBoxes[group] = box;
+        }
+        
+        box.addChild( checkBox );
+    }
+    
+    private function createGropBox(cardType:String):HBox {
+        var box:HBox = new HBox();
+        
+        var cardGroup:String = getCardNameGroup( cardType );
+        var label:Label = new Label();
+        label.text = cardGroup;
+        
+        var blank:Label = new Label();
+        blank.text = "  ";
+        box.addChild( blank );
+        
+        checkBoxPlace.addChild( label );
+        checkBoxPlace.addChild( box );
+        
+        return box;
+    }
+    
+    
+    private var cardGroupReg:RegExp = /(.+)(:|：)(.+)/;
+    
+    private function getCardGroupInfo(cardType:String):Object {
+        
+        var cardName:String = getCardName(cardType);
+        
+        var info:Object = {"group" : cardName,
+                           "name" : cardName };
+        
+        var result:Object = cardGroupReg.exec(cardName);
+        
+        if( result == null ) {
+            return info;
+        }
+        
+        info = { "group" : result[1],
+                 "name" : result[3] };
+        
+        return info;
+    }
+    
+    private function getCardNameGroup(cardType:String):String {
+        var info:Object = getCardGroupInfo(cardType);
+        return info["group"];
+    }
+    
+    private function getGroupExclideCardName(cardType:String):String {
+        var info:Object = getCardGroupInfo(cardType);
+        return info["name"];
+    }
+    
+    private function changeTrumpCheck():void {
+        deckCount.enabled = trump.selected;
+        jorkerCount.enabled = trump.selected;
+    }
+       
+    private function changeRandomDungeonTrumpCheck():void {
+        randomDungeonCardCount.enabled = randomDungeonTrumpCheck.selected;
+        randomDungeonJorkerCount.enabled = randomDungeonTrumpCheck.selected;
+    }
+       
+    private function checkAndAddCardInfos(cardInitInfos:Array, cardType:String):void {
+           
+        var checkBox:CheckBox = checkBoxes[cardType];
+           
+        if( checkBox == null ) {
+            return;
+        }
+        if( ! checkBox.selected ) {
+            return;
+        }
+        
+        cardInitInfos.push( {'mountName': cardType } );
+    }
+       
+    public function execute():void {
+        var title:String = Language.s.cardInitQuestion;
+        var message:String = Language.s.cardInitQuestionMessage;
+        var cardInitInfos:Array = getCardInitInfos();
+        executeInitCard(title, message, cardInitInfos, initCardsResult);
+    }
+    
+    static private function executeInitCard(title:String, message:String,
+                                            infos:Array, result:Function):void {
+        Alert.show(message, title,
+                   Alert.OK | Alert.CANCEL, null, 
+                   function(e : CloseEvent) : void {
+                       if(e.detail == Alert.OK) {
+                           DodontoF_Main.getInstance().getGuiInputSender().getSender().initCards(infos, result);
+                       }});
+    }
+    
+    private function getCardInitInfos():Array {
+        var cardInitInfos:Array = [];
+        
+        if( trump.selected ) {
+            var trumpType:String = cardTypeTrump;
+            if( trumpSizeChangedCheck.selected ) {
+                trumpType += "\t" + trumpSizeChanged;
+            }
+            
+            cardInitInfos.push( {'mountName':trumpType,
+                                 'useLineCount':(52 + jorkerCount.value),
+                                 "deckCount": deckCount.value} );
+        }
+        
+        if( randomDungeonTrumpCheck.selected ) {
+            cardInitInfos.push( {'mountName': randomDungeonTrump,
+                                 'cardCount': randomDungeonCardCount.value,
+                                 'jorkerCount': randomDungeonJorkerCount.value} );
+        }
+        
+        for(var i:int = 0 ; i < cardInfos.length ; i++) {
+            var cardInfo:Object = cardInfos[i];
+            var cardType:String = cardInfo.type;
+            
+            if( isTrump(cardType) ) {
+                continue;
+            }
+            
+            if( cardType == randomDungeonTrump ) {
+                continue;
+            }
+            
+            checkAndAddCardInfos(cardInitInfos, cardType);
+        }
+        
+        return cardInitInfos;
+    }
+    
+    public function initCards(infos:Array, result:Function):void {
+        try{
+            var cardInitInfos:Array = getCardInitInfos();
+            guiInputSender.getSender().initCards(infos, result);
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    private function initCardsResult(event:Event):void {
+        var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(event);
+        var result:String = jsonData.result;
+        
+        if( result != "OK" ) {
+            Alert.show("result");
+            return;
+        }
+        
+        DodontoF_Main.getInstance().getDodontoF().selectMenuByManuName("isCardPickUpVisible", jsonData.cardExist);
+        guiInputSender.getSender().resetCharactersUpdateTime();
+        PopUpManager.removePopUp(this);
+    }
+    
+       
+    static public function cleanCard():void {
+        var title:String = Language.s.checkCardAllDelete;
+        var message:String = Language.s.checkCardAllDeleteMessage;
+        var cardInitInfosDummy:Array = new Array();
+        var initCardsResultDummy:Function = function(event:Event):void {
+        };
+        
+        executeInitCard(title, message, cardInitInfosDummy, initCardsResultDummy);
+    }
+    
+    ]]>
+  </mx:Script>
+  
+</torgtaitai:CommonPopupWindow>

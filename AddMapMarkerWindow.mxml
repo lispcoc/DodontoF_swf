@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   x="250"
+   y="50"
+   width="390"
+   height="200"
+   title="{Language.s.addMapMarker}" 
+   
+   showCloseButton="true"
+   >
+  
+  <mx:HBox height="100%" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Box height="100%" width="230" verticalAlign="middle">
+
+      <mx:HBox width="100%" height="25"
+               verticalGap="0"
+               horizontalGap="0"
+             >
+        
+	    <mx:Label text="{Language.s.mapMarkerHeightSize}" />
+        <mx:NumericStepper id="mapMarkerHeigth" minimum="1" maximum="100" value="1" change="changeView()" />
+        
+        <mx:Spacer width="10" height="10"/>
+        
+	    <mx:Label text="{Language.s.mapMarkerWidthSize}" />
+        <mx:NumericStepper id="mapMarkerWidth" minimum="1" maximum="100" value="1" change="changeView()" />
+      </mx:HBox>
+      
+      
+      <mx:HBox width="100%" height="25"
+               verticalGap="0"
+               horizontalGap="0"
+               >
+        
+        <mx:Label text="{Language.s.mapMarkerColor}" />
+        <mx:ColorPicker id="colorPicker" showTextField="true" selectedColor="0xBBBB00"
+                        change="changeView()" />
+        
+        <mx:Spacer width="10" height="10"/>
+        
+        <mx:CheckBox id="isPaint" label="{Language.s.mapMarkerPaint}" selected="false" height="100%"
+                     change="changeView()" />
+        
+        <mx:CheckBox id="isMany" label="{Language.s.manyCreateCheck}" selected="false" height="100%"
+                     visible="{isCreate}" />
+        <mx:CheckBox id="isFixed" label="{Language.s.mapMarkerFix}" selected="false" height="100%"
+                     visible="{ ! isCreate}" />
+      </mx:HBox>
+      
+      <mx:Label text="{Language.s.message}" />
+      
+      <mx:TextArea id="message" text="" width="100%" height="100%" change="clearStatus()"/>
+      
+        <mx:HBox id="changeExecuteSpace" height="0" width="100%" horizontalAlign="center" verticalAlign="middle" visible="{! isCreate}" >
+        <mx:Button id="executeButton" label="{Language.s.changeButton}" click="changeMapMarker()" />
+        <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+      </mx:HBox>
+      
+    </mx:Box>
+    
+    <mx:Box height="100%" width="100%" horizontalAlign="center" verticalAlign="middle" >
+      <mx:Spacer id="view" height="100%" width="100%" />
+    </mx:Box>
+  </mx:HBox>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.events.FlexEvent;
+    
+    /**
+     * マップマーカー追加画面
+     */
+    
+    [Bindable]
+    protected var isCreate:Boolean = true;
+    
+    /**
+     * Windowの初期化処理
+     */
+    override protected function setup():void {
+        init();
+        changeView();
+        setDragEvent();
+        
+        if( isCreate ) {
+            isFixed.width = 0;
+            isFixed.height = 0;
+        } else {
+            isMany.width = 0;
+            isMany.height = 0;
+        }
+    }
+    
+    /**
+     * 初期化処理。マップマーカー変更画面でオーバーライドさせるために存在
+     */
+    protected function init():void {
+    }
+    
+    
+    /**
+     * マップマーカーのプレビューでは一定以上大きいサイズは縮小して表示する。
+     * その表示処理。
+     */
+    private function changeView():void {
+        
+        var color:uint = colorPicker.selectedColor;
+        var fillColor:uint = (isPaint.selected ? color : 0xFFFFFF);
+        var widthHeight:Object = getViewWidthHeight();
+        var lineWidth:int = 5;
+        
+        view.graphics.clear();
+        view.graphics.lineStyle(lineWidth, color);
+        view.graphics.beginFill(fillColor, 1.0);
+        view.graphics.drawRect(0, lineWidth, widthHeight['width'], widthHeight['height']);
+        view.graphics.endFill();
+    }
+    
+    /**
+     * マップマーカーのプレビューを縮小する場合のサイズの計算
+     */
+    private function getViewWidthHeight():Object {
+        var height:int = mapMarkerHeigth.value;
+        var width:int = mapMarkerWidth.value;
+        var maxLength:int = Math.max(height, width);
+        
+        var maxRate:Number = 2.5;
+        var rate:Number = Math.min(maxLength, maxRate);
+        
+        var squareLength:int = Map.getSquareLength();
+        
+        var result:Object = { "height": (squareLength * height / maxLength * rate),
+                              "width" : (squareLength * width / maxLength * rate) };
+        
+        return result;
+    }
+    
+    /**
+     * マップマーカーのプレビュー表示部分は
+     * ドラッグ＆ドロップでマップに落とす事で追加処理となる。
+     * その処理をここで実装。
+     */
+    protected function setDragEvent():void {
+        view.addEventListener(MouseEvent.MOUSE_DOWN, function(event:MouseEvent):void {
+                view.startDrag();
+                event.stopPropagation();
+                this.status = "";
+            });
+        
+        view.addEventListener(MouseEvent.MOUSE_UP, function(event:MouseEvent):void {
+                view.stopDrag();
+                
+                var globalPoint:Point = localToGlobal( new Point(view.x + 250 , view.y + 25) );
+                var dropMapPoint:Point = DodontoF_Main.getInstance().getMap().getCharacterPointFromGlobalPoint(globalPoint);
+                
+                Log.logging("dropMapPoint.x", dropMapPoint.x);
+                Log.logging("dropMapPoint.y", dropMapPoint.y);
+                
+                if( (dropMapPoint.x >= 0) && (dropMapPoint.y >= 0) ) {
+                    addMapMarker(dropMapPoint.x, dropMapPoint.y);
+                }
+                
+                view.x = 0;
+                view.y = 0;
+            });
+    }
+    
+    /**
+     * エラーメッセージのクリア処理
+     */
+    private function clearStatus():void {
+        this.status = "";
+    }
+    
+    /**
+     * マップマーカーの変更処理。
+     * 変更処理画面でオーバーライドするために定義だけしておく。
+     */
+    protected function changeMapMarker():void {
+    }
+    
+    /**
+     * マップマーカー追加処理。
+     */
+    private function addMapMarker(x:int, y:int):void {
+        try{
+            clearStatus();
+            
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.addMapMarker(message.text, colorPicker.selectedColor, 
+                                        isPaint.selected,
+                                        mapMarkerWidth.value, mapMarkerHeigth.value, 
+                                        x, y);
+            
+            if( ! isMany.selected ) {
+                PopUpManager.removePopUp(this);
+            }
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    ]]>
+  </mx:Script>
+  
+</torgtaitai:CommonPopupWindow>

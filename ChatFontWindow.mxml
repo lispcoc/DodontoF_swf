@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="350"
+   height="400"
+   title="{Language.s.chatFontWindow}" 
+   showCloseButton="true"
+   >
+  
+  <mx:Box width="100%" height="100%">
+    <mx:Form
+       paddingTop="1" paddingBottom="1" 
+       paddingRight="1" paddingLeft="1" >
+      
+	  <mx:FormItem label="{Language.s.chatFontColor}">
+      <mx:ColorPicker id="chatMessageColorPicker" showTextField="true" selectedColor="0x000000"
+                      change="printSample()"
+                      toolTip="{Language.s.chatFontColorSetting}" />
+      </mx:FormItem>
+      
+	  <mx:FormItem label="{Language.s.chatFontBackgroundColor}">
+      <mx:ColorPicker id="chatBackgroundColorPicker" showTextField="true" selectedColor="0x000000"
+                      change="printSample()"
+                      toolTip="{Language.s.chatFontBackgroundColorSetting}" />
+      </mx:FormItem>
+	  <mx:FormItem label="{Language.s.chatFontSize}">
+        <mx:ComboBox id="chatFontSizeComboBox" editable="true" prompt="8"
+                     change="printSample()"
+                     toolTip="{Language.s.chatFontSizeTips}" />
+      </mx:FormItem>
+      
+	  <mx:FormItem label="{Language.s.chatFontTimeFormat}">
+        <mx:CheckBox id="isDisplayTimeCheckBox" 
+                     label="{Language.s.chatFontTimeFormatInfo}"
+                     change="printSample()"
+                     />
+      </mx:FormItem>
+      
+	  <mx:FormItem label="{Language.s.chatFontDisplayOtherChannel}">
+        <mx:CheckBox id="isDisplayOtherChannelCheckBox" 
+                     label="{Language.s.chatFontDisplayOtherChannelInfo}"
+                     change="printSample()"
+                     />
+      </mx:FormItem>
+      
+	  <mx:FormItem label="{Language.s.chatChannelColored}">
+        <mx:CheckBox id="isChatChannelColoredCheckBox" 
+                     label="{Language.s.chatChannelColoredInfo}"
+                     change="printSample()"
+                     />
+      </mx:FormItem>
+      
+	  <mx:FormItem label="{Language.s.chatFontInputSample}">
+        <mx:TextInput id="input" height="25" width="100%" text="{Language.s.title}"
+                     change="printSample()"
+                     />
+      </mx:FormItem>
+      
+    </mx:Form>
+    
+    <mx:Label text="{Language.s.chatFontOutputSample}" />
+    <mx:Box id="sampleTabsBox" width="100%" height="100%"
+                       paddingTop="5"
+                       paddingBottom="5"
+                       paddingRight="5"
+                       paddingLeft="5"
+                       >
+      <mx:TabNavigator id="sampleTabs" width="100%" height="100%"
+                       paddingTop="0"
+                       paddingBottom="0"
+                       change="printSample()"
+                       >
+        <mx:Box height="100%" width="100%" label="{DodontoF_Main.publicChatChannelName}">
+          <mx:TextArea height="100%" width="100%" editable="false" />
+        </mx:Box>
+        
+        <mx:Box height="100%" width="100%" label="{DodontoF_Main.publicChatChannelName}">
+          <mx:TextArea height="100%" width="100%" editable="false" />
+        </mx:Box>
+        
+        <mx:Box id="sampleBase" height="100%" width="100%" label="{Language.s.smallTalkTabName}">
+          <mx:TextArea id="sample" height="100%" width="100%" text="{Language.s.title}" editable="false"
+                       creationComplete="setupForSample()" />
+        </mx:Box>
+      </mx:TabNavigator>
+    </mx:Box>
+        
+    
+    <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle">
+      <mx:Button id="executeButton" label="{Language.s.chatFontSetting}" click="execute()" />
+      <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+    </mx:HBox>
+  </mx:Box>
+  
+  <mx:Script>
+    <![CDATA[
+
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+       
+    private var chatWindow:ChatWindow;
+    private var defaultFontSize:int;
+       
+    public function init(chatWindow_:ChatWindow,
+                         chatFontColor:String,
+                         chatBackgroundColor:String,
+                         chatFontSize:int,
+                         isDisplayTime:Boolean,
+                         isDisplayOtherChannel:Boolean,
+                         isChatChannelColored:Boolean):void {
+        
+        chatWindow = chatWindow_;
+        chatMessageColorPicker.selectedColor = parseInt("0x" + chatFontColor);
+        chatBackgroundColorPicker.selectedColor = parseInt("0x" + chatBackgroundColor);
+        defaultFontSize = chatFontSize;
+        isDisplayTimeCheckBox.selected = isDisplayTime;
+        isDisplayOtherChannelCheckBox.selected = isDisplayOtherChannel;
+        isChatChannelColoredCheckBox.selected = isChatChannelColored;
+        
+        setDefaultFontSize();
+    }
+       
+    override protected function setup():void {
+        Log.loggingTuning("=>setup() Begin");
+        try {
+            sampleTabs.selectedIndex = 2;
+            setChatFontComboBoxDefault();
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+        Log.loggingTuning("=>setup() End");
+    }
+       
+    private function setChatFontComboBoxDefault():void {
+        var fontSizeList:Array = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
+           
+        var fontSizeOptionList:Array = [];
+        for(var i:int = 0 ; i < fontSizeList.length ; i++) {
+            var fontSize:int = fontSizeList[i];
+               
+            var option:Object = new Object();
+            option.label = "" + fontSize;
+               
+            fontSizeOptionList.push(option);
+        }
+        
+        chatFontSizeComboBox.dataProvider = fontSizeOptionList;
+        setDefaultFontSize();
+    }
+
+    private function setDefaultFontSize():void {
+        chatFontSizeComboBox.prompt = "" + defaultFontSize;
+        printSample();
+    }
+    
+    static public function getColor(colorPicker:ColorPicker):String {
+        return Utils.getColorString(colorPicker.selectedColor);
+    }
+       
+    private function setupForSample():void {
+        printSample();
+    }
+    
+    private function printSample():void {
+        if( sample == null ) {
+            return;
+        }
+        
+        var color:String = getColor(chatMessageColorPicker);
+        //sampleBase.setStyle('color', '0x' + color);
+        
+        var backgroundColor:String = getColor(chatBackgroundColorPicker);
+        sample.setStyle('backgroundColor', '0x' + backgroundColor);
+           
+        var fontSize:int = parseInt( chatFontSizeComboBox.text );
+        sample.setStyle("fontSize", fontSize);
+        
+        var htmlText:String = getChatMessageForPrintHtml(color);
+        sample.htmlText = htmlText
+        
+        var channeclColor:String
+        = ChatWindow.getChannelColorByColored(sampleTabs.selectedIndex,
+                                              isChatChannelColoredCheckBox.selected );
+        sampleTabsBox.setStyle("backgroundColor", channeclColor);
+    }
+    
+    private function getChatMessageForPrintHtml(color:String):String {
+        
+        var time:Number = new Date().getTime() / 1000;
+        var name:String = Language.s.chatFontSampleName;
+        
+        var htmlText:String = chatWindow.getChatMessageTrader().
+        getChatMessageForPrintHtml(input.text,
+                                   name,
+                                   color,
+                                   time,
+                                   isDisplayTimeCheckBox.selected);
+        
+        var oterhChannelHtml:String = "";
+        
+        if( isDisplayOtherChannelCheckBox.selected ) {
+            var channel:int = chatWindow.lastChatChannel;
+            var tabName:String = chatWindow.getChatChannle(channel).getDefaultLabel();
+            
+            oterhChannelHtml = "\n" + 
+                ChatMessageTrader.getChatMessageOtherChannel(htmlText, tabName);
+        }
+        
+        return (htmlText + oterhChannelHtml);
+    }
+    
+    
+    public function execute():void {
+        
+        var color:String = getColor(chatMessageColorPicker);
+        chatWindow.setChatFontColor(color);
+           
+        var backgroundColor:String = getColor(chatBackgroundColorPicker);
+        chatWindow.setChatBackgroundColor(backgroundColor);
+           
+        var fontSize:int = parseInt( chatFontSizeComboBox.text );
+        chatWindow.setChatFontSize(fontSize);
+        
+        chatWindow.setDisplayTime( isDisplayTimeCheckBox.selected );
+        chatWindow.setDisplayOtherChannel( isDisplayOtherChannelCheckBox.selected );
+        chatWindow.setChatChannelColoed( isChatChannelColoredCheckBox.selected );
+        chatWindow.saveChatInfos();
+
+        PopUpManager.removePopUp(this);
+    }
+       
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

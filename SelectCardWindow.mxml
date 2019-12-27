@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="680"
+   height="420"
+   title="" 
+   showCloseButton="true"
+   close="closeWindow()"
+   >
+  
+  <mx:Box id="baseBox"
+      width="100%" height="100%" horizontalAlign="center" verticalAlign="middle">
+    
+    <mx:Label id="howToLabel" text=""/>
+    <mx:Tile id="preview" 
+           height="100%" width="100%"
+           paddingTop="10" paddingBottom="10" 
+           paddingRight="10" paddingLeft="10" 
+           verticalGap="30" horizontalGap="10" 
+           direction="horizontal" 
+           borderStyle="solid" 
+           tileWidth="50" />
+
+      <mx:ProgressBar id="imageProgressBar" indeterminate="true"
+                  width="100%" height="20" minHeight="0" minWidth="0"
+                  mode="manual" />
+    </mx:Box>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.core.UIComponent;
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.controls.TextArea;
+    import mx.controls.Alert;
+    import mx.events.DragEvent;
+    import mx.core.IFlexDisplayObject;
+    import mx.core.DragSource;
+    import mx.managers.DragManager;
+    
+    private var thisObj:SelectCardWindow;
+    
+    private var dragDropForDrow:DragDrop = new DragDrop("drow card from CardMount");
+    
+    private var map:Map;
+    
+    override protected function setup():void {
+        thisObj = this;
+        
+        map = DodontoF_Main.getInstance().getMap();
+        
+        dragDropForDrow.addDropEvent( map.getView(), drowAction );
+        
+        init();
+    }
+    
+    protected function init():void {
+        title = Language.s.selectCard;
+        howToLabel.text = Language.s.selectCardMessage;
+    }
+    
+    public function closeWindow():void {
+        try {
+            dragDropForDrow.removeDropEvent();
+        } catch(e:Error) {
+        }
+        PopUpManager.removePopUp(this);
+    }
+    
+    protected var cardMount:CardMount;
+    
+    public function setCardMount(cardMount_:CardMount):void {
+        cardMount = cardMount_;
+        
+        getMountCardInfos();
+    }
+    
+    protected function getMountCardInfos():void {
+        var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+        guiInputSender.getMountCardInfos( cardMount.getMountNameForDisplay(),
+                                          cardMount.getMountName(),
+                                          cardMount.getId(),
+                                          printMountCardInfos );
+    }
+    
+    protected function printMountCardInfos(event:Event):void {
+        Log.loggingTuning("=>printMountCardInfos(event:Event) Begin");
+        try {
+            imageProgressBar.height = 0;
+            imageProgressBar.visible = false;
+            
+            var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(event);
+            var cards:Array = getSortedCards(jsonData as Array);
+            
+            for(var i:int = 0 ; i < cards.length ; i++) {
+                var card:Card = cards[i];
+                var component:UIComponent = getCardComponent(card);
+                preview.addChild(component);
+            }
+            
+        } catch(e:Error) {
+            Log.loggingError("exception : " + e);
+        }
+        Log.loggingTuning("=>printMountCardInfos(event:Event) End");
+    }
+    
+    
+    public function getSortedCards(cardInfos:Array):Array {
+        
+        cardInfos.sortOn("imgId");
+        
+        var cards:Array = new Array();
+        
+        for(var i:int = 0 ; i < cardInfos.length ; i++) {
+            var cardInfo:Object = cardInfos[i];
+            var card:Card = getCard(cardInfo);
+            cards.push(card);
+        }
+        
+        return cards;
+    }
+    
+    private function getCard(cardInfo:Object):Card {
+        var card:Card = new Card(cardInfo);
+        
+        card.init(map, 0, 0);
+        card.setRotation(0);
+        card.reverseCardLocal(false);
+        card.loadViewImage();
+        card.setTitleVisible(false);
+        
+        card.hideContextMenu();
+        
+        return card;
+    }
+    
+    private function getCardComponent(card:Card):UIComponent {
+        var aspectRation:Number = (1.0 * card.getHeight() / card.getWidth());
+        
+        var component:UIComponent = new UIComponent();
+        component.width = preview.tileWidth;
+        component.height = component.width * aspectRation;
+        component.addChild(card.getView());
+        component.scaleX = component.width / (card.getWidth() * Map.getSquareLength());
+        component.scaleY = component.height / (card.getHeight() * Map.getSquareLength());
+        
+        var value:Object = {
+            "card" : card,
+            "component" : component };
+        
+        dragDropForDrow.setDragEventWidthHeigth(card.getView(), value, 104, 154);
+        
+        return component;
+    }
+    
+    private function drowAction(obj:Object):void {
+        var card:Card = obj.card;
+        var component:UIComponent = obj.component;
+        
+        var base:UIComponent = UIComponent(DodontoF_Main.getInstance().getDodontoF());
+        var mousePoint:Point = new Point(base.mouseX, base.mouseY);
+        var cardPoint:Point = dragDropForDrow.getLayer().globalToLocal(mousePoint);
+        
+        var x:int = cardPoint.x - (card.getWidth() / 2);
+        var y:int = cardPoint.y - (card.getHeight() / 2);
+        
+        drawTargetCard(card, component, x, y);
+    }
+    
+    protected function drawTargetCard(card:Card, component:UIComponent, x:int, y:int):void {
+        var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+        guiInputSender.getSender().drawTargetCard( card.getJsonData(),
+                                                   cardMount.getSelfOwnerId(),
+                                                   cardMount.getSelfOwnerName(),
+                                                   cardMount.getId(),
+                                                   cardMount.getMountName(),
+                                                   card.getId(),
+                                                   x, y,
+                                                   getRemoveComponentFunction(component));
+    }
+    
+    
+    protected function getRemoveComponentFunction(component:UIComponent):Function {
+        return function(event:Event):void {
+            var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(event);
+            
+            var result:String = jsonData.result;
+            
+            if( result == "OK" ) {
+                thisObj.preview.removeChild(component);
+            }
+        }
+    }
+    
+    
+             ]]>
+  </mx:Script>
+  
+</torgtaitai:CommonPopupWindow>

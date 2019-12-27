@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="400"
+   height="250"
+   title="{Language.s.editReplayConfig}" 
+   showCloseButton="true"
+   >
+  
+  <mx:CheckBox id="grid" label="{Language.s.isDisplayGridOnReplay}" selected="true"
+               height="100%"
+               />
+  <mx:CheckBox id="position" label="{Language.s.isDisplayPositionOnReplay}" selected="true"
+               height="100%"
+               />
+  <mx:CheckBox id="dice" label="{Language.s.isVisualDiceOnReplay}" selected="true"
+               height="100%"
+               />
+  <mx:CheckBox id="adjustStand" label="{Language.s.isStandingGraphicsOnReplay}" selected="true"
+               height="100%"
+               />
+  <mx:CheckBox id="sound" label="{Language.s.sound}" selected="true"
+               height="100%"
+               />
+  <mx:HBox width="100%">
+    <mx:Label text="{Language.s.chatWindowBackgroundColorOnReplay}" />
+    <mx:ColorPicker id="chatBackgroundColorPicker" showTextField="true" selectedColor="0xFFFFFF"
+                    toolTip="{Language.s.chatBackgroundColorOnReplay}" />
+  </mx:HBox>
+  
+  <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button id="executeButton" label="{Language.s.setConfigOnReplay}" click="execute()" />
+    <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+  </mx:HBox>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.managers.PopUpManager;
+    import mx.controls.Label;
+    import mx.controls.Alert;
+    
+    override protected function setup():void {
+    }
+    
+    public function init(replayConfig:Object):void {
+        initCheckBox(grid, replayConfig, "grid");
+        initCheckBox(position, replayConfig, "position");
+        initCheckBox(dice, replayConfig, "dice");
+        initCheckBox(adjustStand, replayConfig, "adjustStand");
+        initCheckBox(sound, replayConfig, "sound");
+        initColorPicker(chatBackgroundColorPicker, replayConfig, "chatBackgroundColor");
+    }
+    
+    private function initCheckBox(checkBox:CheckBox, data:Object, paramName:String):void {
+        if( data == null ) {
+            return;
+        }
+        
+        if( data[paramName] == null ) {
+            return;
+        }
+        
+        checkBox.selected = data[paramName];
+    }
+    
+    private function initColorPicker(colorPicker:ColorPicker, data:Object, paramName:String):void {
+        if( data == null ) {
+            return;
+        }
+        
+        var colorString:String = data[paramName];
+        if( colorString == null ) {
+            return;
+        }
+        
+        colorPicker.selectedColor = parseInt("0x" + colorString);
+    }
+    
+    
+    private var resultCallBack:Function;
+    
+    public function setResultCallBack(func:Function):void {
+        resultCallBack = func;
+    }
+    
+    public function execute():void {
+        try {
+            var replayConfig:Object = {
+                "grid" : grid.selected,
+                "position" : position.selected,
+                "dice" : dice.selected,
+                "adjustStand" : adjustStand.selected,
+                "sound" : sound.selected,
+                "chatBackgroundColor" : ChatFontWindow.getColor(chatBackgroundColorPicker)
+//              "channelNames" : channelNames.text.split(/[\s　]+/)
+            };
+            
+            resultCallBack(replayConfig);
+            
+            PopUpManager.removePopUp(this);
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="400"
+   height="475"
+   title="{Language.s.load}" 
+   showCloseButton="true"
+   >
+  
+  <mx:Box width="100%" height="100%">
+	<mx:RadioButtonGroup id="RadioGroup_Load"/>
+	<mx:RadioButton groupName="RadioGroup_Load"
+      id="loadAll"
+      label="{Language.s.loadAllSaveData}"
+      click="loadSelectBox.enabled = false"
+       selected="true"
+      />
+	<mx:RadioButton groupName="RadioGroup_Load"
+      id="loadSelected"
+      label="{Language.s.loadAPartOfSaveData}"
+      click="loadSelectBox.enabled = true"
+      />
+    
+    <mx:HBox id="loadSelectBox" width="100%" height="{this.height-150}" enabled="false" >
+      <mx:Spacer width="15" height="100%" />
+      <mx:Box width="100%" height="100%" >
+        <mx:CheckBox id="map" label="{Language.s.loadMapData}" />
+        <mx:Label text="{Language.s.loadAPartOfSaveDataInfomationForMapObject}" />
+        <mx:CheckBox id="floorTile" label="{Language.s.floorTile}" />
+        <mx:CheckBox id="mapMask" label="{Language.s.mapMask}" />
+        <mx:CheckBox id="mapMarker" label="{Language.s.mapMarker}" />
+        <mx:CheckBox id="character" label="{Language.s.character}" />
+        <mx:CheckBox id="characterWaitingRoom" label="{Language.s.characterWaitingRoom}" />
+        <mx:CheckBox id="magicRangeMarker" label="{Language.s.magicRangeBoth}" />
+        <mx:CheckBox id="memo" label="{Language.s.sharedMemo}" />
+        <mx:CheckBox id="standingGraphicInfos" label="{Language.s.standingGraphics}" />
+        <mx:CheckBox id="cutIn" label="{Language.s.cutIn}" />
+        <mx:CheckBox id="card" label="{Language.s.card}" />
+        <mx:CheckBox id="initiative" label="{Language.s.initiativeWindowTitle}" />
+        <mx:CheckBox id="resource" label="{Language.s.resourceWindowTitle}" />
+        <mx:CheckBox id="diceBotTable" label="{Language.s.diceBotTable}" />
+      </mx:Box>
+    </mx:HBox>
+    
+    <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+      <mx:Button id="executeButton" label="{Language.s.executeButton}" click="execute()" />
+      <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+    </mx:HBox>
+  </mx:Box>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.managers.PopUpManager;
+    import mx.controls.Label;
+    import mx.controls.Alert;
+    
+    override protected function setup():void {
+    }
+
+    private function getLoadParams():Object {
+        if( loadAll.selected ) {
+            return null;
+        }
+        
+        var targets:Array = new Array();
+        
+        if( map.selected ) {
+            targets.push("map");
+        }
+        if( floorTile.selected ) {
+            targets.push( FloorTile.getTypeStatic() );
+        }
+        if( mapMask.selected ) {
+            targets.push( MapMask.getTypeStatic() );
+        }
+        if( mapMarker.selected ) {
+            targets.push( MapMarker.getTypeStatic() );
+        }
+        if( character.selected ) {
+            targets.push( Character.getTypeStatic() );
+        }
+        if( characterWaitingRoom.selected ) {
+            targets.push( "characterWaitingRoom" );
+        }
+        if( magicRangeMarker.selected ) {
+            targets.push( MagicRange.getTypeStatic() );
+            targets.push( MagicRangeDD4th.getTypeStatic() );
+        }
+        if( memo.selected ) {
+            targets.push( Memo.getTypeStatic() );
+        }
+        if( card.selected ) {
+            targets.push( Card.getTypeStatic() );
+        }
+        
+        if( standingGraphicInfos.selected ) {
+            targets.push( "standingGraphicInfos" );
+        }
+        if( cutIn.selected ) {
+            targets.push( "cutIn" );
+        }
+        if( initiative.selected ) {
+            targets.push( "initiative" );
+        }
+        if( resource.selected ) {
+            targets.push( "resource" );
+        }
+        if( diceBotTable.selected ) {
+            targets.push( "diceBotTable" );
+        }
+        
+        Log.logging("targets", targets);
+        
+        var params:Object = {
+            'targets' : targets
+        };
+        
+        return params;
+    }
+    
+    public function execute():void {
+        try {
+            var params:Object = getLoadParams();
+            var resultFunction:Function = getExecuteResult(params);
+            DodontoF_Main.getInstance().getGuiInputSender().load(params, resultFunction);
+            
+            PopUpManager.removePopUp(this);
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    public function getExecuteResult(params:Object):Function {
+        return function(dataEvent:DataEvent):void {
+            Log.logging("LoadWindow result call begin");
+            
+            try {
+                var jsonData:Object = SharedDataReceiver.getJsonDataFromDataEvent(dataEvent);
+                Log.logging("getExecuteResult jsonData", jsonData);
+                var resultText:String = jsonData.resultText;
+                Log.logging("load resultText", resultText);
+                
+                //エラー受信処理
+                if( resultText != "OK" ) {
+                    Alert.show( Messages.getMessage(resultText) );
+                    return;
+                }
+                
+                //全データロード時には最終更新時間を初期化して、
+                //全サーバデータ（チャットログとかも）をロードしなおすようにする。
+                if( params == null ) {
+                    DodontoF_Main.getInstance().getGuiInputSender().clearLastUpdateTimes();
+                }
+            } catch(error:Error) {
+                this.status = error.message;
+                Alert.show( error.message );
+            }
+        }
+    }
+    
+    
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

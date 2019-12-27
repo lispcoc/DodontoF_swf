@@ -1,0 +1,776 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml"
+        xmlns:torgtaitai="*" 
+        alpha="1"
+        horizontalAlign="center"
+        verticalAlign="middle"
+        height="100%" width="100%" minHeight="0" minWidth="0"
+        creationComplete="constructor();"
+        paddingTop="0" paddingBottom="0" 
+        verticalGap="0" horizontalGap="0"
+        >
+  <mx:HBox id="imageSelectBox"
+           verticalAlign="middle"
+           horizontalAlign="center"
+           height="100%" width="100%" minHeight="0" minWidth="0"
+           paddingTop="0" paddingBottom="0" 
+           verticalGap="0" horizontalGap="0" 
+           >
+    
+    <mx:Box id="previewSpace"
+            verticalAlign="middle"
+            horizontalAlign="center"
+            height="100%" width="0" minHeight="0" minWidth="0"
+            />
+    
+    <mx:Box id="imageSelectSpaceBoxOpener" 
+            verticalAlign="middle"
+            horizontalAlign="center"
+            height="0" width="0" minHeight="0" minWidth="0"
+            visible="false"
+            >
+            <mx:Button label="{Language.s.imageSelecterOpenButton}"
+                       fontWeight="bold" click="changeSelectMode()" />
+    </mx:Box>
+    
+    <mx:Box id="imageSelectSpaceBox" 
+            height="100%" width="100%" minHeight="0" minWidth="0"
+            horizontalAlign="center" verticalAlign="middle">
+      
+      <mx:Tile id="imageSelectSpace" 
+               height="100%" width="100%" minHeight="0" minWidth="0"
+               verticalAlign="middle"
+               horizontalAlign="center"
+               direction="horizontal" 
+               borderStyle="solid" 
+               paddingTop="1" paddingBottom="1" 
+               paddingRight="1" paddingLeft="1" 
+               verticalGap="2" horizontalGap="2" 
+               tileWidth="50" />
+      <mx:HBox width="100%" minWidth="0" minHeight="0"
+               height="{(Config.canUseExternalImageModeOn ? (Config.fontSize + 5) : 0)}" 
+               visible="{Config.canUseExternalImageModeOn}"
+               horizontalAlign="center" verticalAlign="middle">
+        <mx:Label id="imageUrlInputLabel" text="{Language.s.characterImageUrlItem}：" fontWeight="normal"/>
+        <mx:TextInput id="imageUrlInput" editable="{Config.canUseExternalImageModeOn}" enabled="false" width="100%" text="" />
+      </mx:HBox>
+      <mx:HBox width="100%" minHeight="0" minWidth="0"
+               horizontalAlign="center" verticalAlign="middle">
+        <mx:Label text="{Language.s.tagName}：" fontWeight="bold"/>
+        <torgtaitai:SuggestComboBox id="tagName" fontWeight="normal"
+                     width="170" change="tagNameChanged()" enabled="false" />
+        <mx:Label id="indexPrintLabel" text="0/0" />
+        <mx:Button label="{Language.s.secretImage}" height="20" fontWeight="normal" click="createPasswordWindow()" />
+        <mx:Button id="mirrored" label="{Language.s.reverseImage}" height="20" fontWeight="normal" toolTip="" selected="false" toggle="true"  click="changeMirror()"
+      paddingRight="1" paddingLeft="1" 
+      measuredMinWidth="0" minWidth="0" explicitMinWidth="0"
+      visible="false"
+      />
+      </mx:HBox>
+      
+      <mx:HBox id="tagDispalyBox" 
+               visible="false"
+               height="0" width="100%" minHeight="0" minWidth="0"
+               horizontalAlign="center" verticalAlign="middle">
+        <mx:Label text="{Language.s.tagInSelectedImage}：" fontWeight="normal"/>
+        <mx:TextInput id="tagList" editable="false" width="100%" text="" />
+      </mx:HBox>
+      
+    </mx:Box>
+  </mx:HBox>
+  
+  <mx:ProgressBar id="imageProgressBar" indeterminate="true"
+                  width="100%" height="0" minHeight="0" minWidth="0"
+                  visible="false" mode="manual" />
+  
+  <mx:Script>
+    <![CDATA[
+       import mx.controls.Alert;
+       import mx.events.FlexEvent;
+       import mx.controls.Image;
+       import mx.core.UIComponent;
+       import mx.containers.Box;
+       
+       static private var staticImageHash:Object = new Object();
+       
+       private var imageUrlChanger:ImageUrlChanger = new ImageUrlChanger();
+       private var imageInfos:Array = new Array();
+       private var imageClickEventFunction:Function = null;
+       private var imageLoadCompleteFunction:Function = null;
+       private var tagInfos:Object = new Object();
+       private var loadedImageCount:int = 0;
+       private var imageLoadCompleteCounter:int = 0;
+       private var defaultTags:Array = [ImageTag.getAllTag()];
+       private var isImageTagLoaded:Boolean = false;
+       private var isImageListLoaded:Boolean = false;
+       static private var currentPassword:String = "";
+       private var canSelectMoviewFile:Boolean = false;
+       
+       static private var nonselectedColor:uint = 0xFFFFFF;
+       static private var selectedColor:uint = 0xFFAAAA;
+       
+       private var preview:UIComponent;
+       
+       static public function getNonSelectedColor():uint {
+           return nonselectedColor;
+       }
+       
+       static public function getSelectedColor():uint {
+           return selectedColor;
+       }
+       
+       public function constructor():void {
+           addEventListener(Event.REMOVED_FROM_STAGE,
+                            function(e:Event):void {
+                                removeEventListener(Event.REMOVED_FROM_STAGE, arguments.callee);
+                                destruct();
+                            }
+                            );
+           
+           tagNameChanged();
+       }
+       
+       private function destruct():void {
+           Log.logging("ImageSelecter.destruct Begin");
+           
+           Utils.stopMoviewPlay(preview);
+           
+           Log.logging("ImageSelecter.destruct End");
+       }  
+       
+       public function addPreview(preview_:UIComponent, size:int = 300):void {
+           preview = preview_;
+           
+           setPreviewSize(size);
+           setLoadCompleteEvent();
+           
+           previewSpace.addChild(preview);
+       }
+       
+       private function setPreviewSize(size:int):void {
+           previewSpace.height = size;
+           previewSpace.width = size;
+           
+           preview.height = size;
+           preview.width  = size;
+       }
+       
+       private function setLoadCompleteEvent():void {
+           var previewLoader:PreviewLoader = preview as PreviewLoader;
+           if( previewLoader != null ) {
+               previewLoader.setLoadImageCompleate( previewCompleteHandler );
+           } else {
+               preview.addEventListener(Event.COMPLETE, previewCompleteHandler);
+           }
+       }
+       
+       
+       private function previewCompleteHandler(event:Event = null):void {
+           Log.logging("ImageSelecter.completeHander begin");
+           
+           changeMirror();
+           
+           var previewTarget:Object = event.currentTarget;
+           var volume:Number = 1;
+           var isPlayMovie:Boolean = true;
+           Utils.setImageVolume(previewTarget, volume, isPlayMovie);
+       }
+       
+       public function getImageUrlChanger():ImageUrlChanger {
+           return imageUrlChanger;
+       }
+       
+       public function getTagInfos():Object {
+           return tagInfos;
+       }
+       
+       public function setImageClickEventFunction(function_:Function):void {
+           imageClickEventFunction = function_;
+       }
+       
+       public function setImageLoadCompleteFunction(function_:Function):void {
+           imageLoadCompleteFunction = function_;
+
+           imageUrlInput.text = getImageUrlChanger().getShort( imageUrlInput.text );
+           if( imageUrlInput.editable ) {
+               imageUrlInput.enabled = true;
+           }
+       }
+       
+       public function selectImageUrl(imageUrl:String):void {
+           imageUrl = getImageUrlChanger().getShort( imageUrl );
+           imageUrlInput.text = imageUrl;
+           imageUrlInput.validateNow();
+           setImageUrl(imageUrl);
+       }
+       
+       private var blankImageUrl:String = "image/whiteBack.png";
+       
+       public function isBlankImage():Boolean{
+           if( imageUrlInput.text == blankImageUrl ) {
+               return true;
+           }
+           if( imageUrlInput.text == "" ) {
+               return true;
+           }
+           return false;
+       }
+       
+       public function getSelectedImageUrl():String {
+           return getImageUrlChanger().getLong( imageUrlInput.text );
+       }
+       
+       public function setDefaultTags(tags:Array):void {
+           defaultTags = tags;
+       }
+       
+       public function isMirrored():Boolean {
+           return mirrored.selected;
+       }
+       
+       public function visibleMirrored(b:Boolean = true):void {
+           mirrored.visible = b;
+       }
+       
+       public function setMirrored(b:Boolean):void {
+           visibleMirrored();
+           mirrored.selected = b;
+       }
+       
+       public function changeMirror():void {
+           if( mirrored.selected ) {
+               preview.scaleX = -1;
+               preview.x = preview.width;
+           } else {
+               preview.scaleX = 1;
+               preview.x = 0;
+           }
+       }
+       
+       public function createPasswordWindow():void {
+           var window:InputTextWindow = DodontoF.popup(InputTextWindow, true) as InputTextWindow;
+           var infoTexts:Array = [Language.s.secretImagePasswordInputMessage];
+           window.init(infoTexts, Language.s.secretImagePasswordInputWindowTitle,
+                       Language.s.secretImagePasswordInput, setPassword, currentPassword);
+       }
+       
+       private function setPassword(password:String):void {
+           currentPassword = password;
+           tagNameChanged();
+           refreshTagNameList();
+       }
+       
+       private function changeNoSelectMode():void {
+           imageSelectSpaceBoxOpener.visible = true;
+           imageSelectSpaceBoxOpener.height = 25;
+           imageSelectSpaceBoxOpener.percentWidth = 100;
+           imageSelectSpaceBox.height = 0;
+           imageSelectSpaceBox.width = 0;
+           imageSelectSpaceBox.visible = false;
+           
+           if( imageLoadCompleteFunction == null ) {
+               return;
+           }
+           
+           imageLoadCompleteFunction.call();
+       }
+       
+       private function changeSelectMode():void {
+           imageSelectSpaceBoxOpener.visible = false;
+           imageSelectSpaceBoxOpener.height = 0;
+           imageSelectSpaceBoxOpener.width = 0;
+           imageSelectSpaceBox.percentHeight = 100;
+           imageSelectSpaceBox.percentWidth = 100;
+           imageSelectSpaceBox.visible = true;
+           
+           initImage();
+       }
+       
+       public function initImage(isLoadInitImageList:Boolean = true):void {
+           if( ! isLoadInitImageList ) {
+               changeNoSelectMode();
+               return;
+           }
+           
+           cleanImageSelectSpace();
+           
+           loadedImageCount = 0;
+           imageLoadCompleteCounter = 0;
+           tagInfos = new Object();
+           
+           tagName.enabled = false;
+           isImageTagLoaded = false;
+           isImageListLoaded = false;
+           imageProgressBar.visible = true;
+           imageProgressBar.height = 20;
+           
+           var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+           guiInputSender.getSender().requestImageTagInfosAndImageList(this.requestImageTagInfosAndImageListResult);
+       }
+       
+       public function requestImageTagInfosAndImageListResult(event:Event):void {
+           Log.loggingTuning("=>requestImageTagInfosAndImageListResult(event:Event) Begin");
+           try {
+               var result:Object = SharedDataReceiver.getJsonDataFromResultEvent( event );
+               tagInfos = result.tagInfos;
+               isImageTagLoaded = true;
+               
+               requestImageListResult(result.imageList, result.imageDir);
+               
+               imageLoadComplete();
+           } catch(e:Error) {
+               Log.loggingException("requestImageTagInfosAndImageListResult", e);
+           }
+       }
+       
+       public function setMoviewFileSelectable(b:Boolean):void {
+           canSelectMoviewFile = b;
+       }
+       
+       private function imageLoaded(event:Event):void {
+           imageLoadCompleteCounter++;
+           imageProgressBar.setProgress(imageLoadCompleteCounter, loadedImageCount);
+           
+           if( imageLoadCompleteCounter >= loadedImageCount ) {
+               isImageListLoaded = true;
+               imageLoadComplete();
+           }
+       }
+       
+       private function imageLoadComplete():void {
+           imageProgressBar.visible = false;
+           imageProgressBar.height = 0;
+           
+           if( ! isImageListLoaded ) {
+               return;
+           }
+           
+           if( ! isImageTagLoaded ) {
+               return;
+           }
+           
+           if( imageLoadCompleteFunction == null ) {
+               return;
+           }
+           
+           refreshTagNameList();
+           
+           imageLoadCompleteFunction.call();
+           tagNameChanged();
+       }
+       
+       private function refreshTagNameList():void {
+           var imageTag:ImageTag = new ImageTag();
+           imageTag.setImageTypes(tagName, tagInfos, defaultTags, currentPassword);
+       }
+       
+       
+       private function addNewImageInfo(imageUrl:String):void {
+           var imageInfo:Object = findImageInfo(imageUrl);
+           if( imageInfo != null ) {
+               return;
+           }
+           
+           if( ! canSelectMoviewFile ) {
+               if( Utils.isMovie(imageUrl) ) {
+                   return;
+               }
+           }
+           
+           var image:Image = createImage(imageUrl);
+           var imageBox:Box = createImageBox(image);
+           imageBox.removeEventListener(MouseEvent.CLICK, this.imageClickEvent);
+           imageBox.addEventListener(MouseEvent.CLICK, this.imageClickEvent);
+           
+           imageInfo = {
+               imageUrl: imageUrl,
+               image: image,
+               imageBox: imageBox
+           }
+           
+           imageInfos.push( imageInfo );
+       }
+       
+       private function createImage(imageUrl:String):Image {
+           if( staticImageHash[imageUrl] != null ) {
+               return staticImageHash[imageUrl];
+           }
+           
+           var image:Image = createEmptyImage();
+           staticImageHash[imageUrl] = image;
+           
+           return image;
+       }
+       
+       static public function createEmptyImage():Image {
+           var image:Image = new Image();
+           
+           image.setStyle("horizontalAlign", "center");
+           image.setStyle("verticalAlign", "middle");
+           image.setStyle("paddingLeft", 0);
+           image.setStyle("paddingRight", 0);
+           image.height = 50;
+           image.width = 50;
+           
+           return image;
+       }
+       
+       
+       static public function createImageBox(image:Image):Box {
+           var imageBox:Box = new Box();
+           
+           imageBox.setStyle("backgroundColor", nonselectedColor);
+           imageBox.setStyle("horizontalAlign", "center");
+           imageBox.setStyle("verticalAlign", "middle");
+           imageBox.setStyle("paddingLeft", 0);
+           imageBox.setStyle("paddingRight", 0);
+           imageBox.width = 60;
+           imageBox.height = 60;
+           
+           imageBox.addChild(image);
+           
+           return imageBox;
+       }
+       
+       
+       public function requestImageListResult(imageList:Array, imageDir:String):void {
+           Log.logging("characterImageList", imageList);
+           
+           imageUrlChanger.setImageDir(imageDir);
+           
+           loadedImageCount = imageList.length;
+           imageProgressBar.indeterminate = false;
+           
+           if( imageList.length == 0 ) {
+               imageLoaded(null);
+           }
+           
+           for(var i:int = 0 ; i < imageList.length ; i++) {
+               var imageUrl:String = imageList[i];
+               imageUrl = Config.getInstance().getUrlString(imageUrl);
+               Log.logging("ImageSelecter.imageUrl", imageUrl);
+               
+               if( ImageTag.isTargetRoom(imageUrl, tagInfos) ) {
+                   addNewImageInfo(imageUrl);
+               }
+               
+               imageLoaded(null);
+           }
+           
+           tagNameChanged();
+           Log.loggingTuning("=>requestImageListResult End");
+       }
+       
+       
+       private function findImageInfo(targetImageUrl:String):Object {
+           for(var i:int = 0 ; i < imageInfos.length ; i++) {
+               var imageInfo:Object = imageInfos[i];
+               if( targetImageUrl == imageInfo["imageUrl"] ) {
+                   return imageInfo;
+               }
+           }
+           
+           return null;
+       }
+       
+       private function findImageInfoFromBox(imageBox:Box):Object {
+           for(var i:int = 0 ; i < imageInfos.length ; i++) {
+               var imageInfo:Object = imageInfos[i];
+               if( imageBox == imageInfo["imageBox"] ) {
+                   return imageInfo;
+               }
+           }
+           
+           return null;
+       }
+       
+       private var isMultiSelectable:Boolean = false;
+       
+       public function setMultiSelectable(b:Boolean):void {
+           isMultiSelectable = b;
+       }
+       
+       private function changeBackgroundColor(imageBox:Box):void {
+           if( isMultiSelectable ) {
+               var currentColor:uint = imageBox.getStyle("backgroundColor");
+               var color:uint = (( currentColor == selectedColor ) ? nonselectedColor : selectedColor );
+               imageBox.setStyle("backgroundColor", color);
+               return;
+           }
+           
+           for(var i:int = 0 ; i < imageInfos.length ; i++) {
+               var imageInfo:Object = imageInfos[i];
+               var targetImageBox:Box = imageInfo.imageBox;
+               targetImageBox.setStyle("backgroundColor", nonselectedColor);
+           }
+           
+           imageBox.setStyle("backgroundColor", selectedColor);
+       }
+       
+       public function getSelectedImageUrls():Array {
+           var imageUrls:Array = new Array();
+           
+           for(var i:int = 0 ; i < imageInfos.length ; i++) {
+               var imageInfo:Object = imageInfos[i];
+               var imageBox:Box = imageInfo.imageBox;
+               var color:uint = imageBox.getStyle("backgroundColor");
+               if( color == selectedColor ) {
+                   var url:String = imageInfo["imageUrl"];
+                   url = Config.getInstance().getOriginalUrlString(url);
+                   imageUrls.push( url );
+               }
+           }
+           
+           return imageUrls;
+       }
+       
+       public function setTagDisplayVisible(b:Boolean):void {
+           tagDispalyBox.visible = b;
+           tagDispalyBox.height = 25;
+       }
+       
+       public function imageClickEvent(event:MouseEvent):void {
+           Utils.stopMoviewPlay(preview);
+           
+           var imageBox:Box = event.currentTarget as Box;
+           var imageInfo:Object = findImageInfoFromBox(imageBox);
+           var imageUrl:String = imageInfo["imageUrl"] as String;
+           
+           changeBackgroundColor( imageBox );
+           
+           setImageUrl(imageUrl);
+           
+           imageClickEventFunction( imageUrl );
+           
+           printIndex( parseInt(imageInfo.displayIndex) );
+           
+           if( tagDispalyBox.visible ) {
+               tagList.text = getTags( Config.getInstance().getOriginalUrlString(imageUrl) ).join("　");
+           }
+       }
+       
+       private var isWhiteImage:Boolean = false;
+       
+       public function keepWhiteImage(b:Boolean):void {
+           isWhiteImage = b;
+           
+           if( imageUrlInput.editable ) {
+               imageUrlInput.enabled = ( ! isWhiteImage );
+           }
+           
+           setImageUrl();
+       }
+       
+       private var currentImageUrl:String = "";
+       
+       private function setImageUrl(imageUrl:String = null):void {
+           if( imageUrl != null ) {
+               currentImageUrl = imageUrl;
+           }
+           
+           if( isWhiteImage ) {
+               imageUrlInput.text = blankImageUrl;
+           } else {
+               imageUrlInput.text = currentImageUrl;
+           }
+       }
+       
+       private function printIndex(index:int):void {
+           indexPrintLabel.text = "" + index + "/" + allDisplayedCount;
+       }
+       
+       private function cleanImageSelectSpace():void {
+           for(var i:int = 0 ; i < imageInfos.length ; i++) {
+               var imageInfo:Object = imageInfos[i];
+               var imageBox:Box = imageInfo.imageBox;
+               
+               imageBox.setStyle("backgroundColor", nonselectedColor);
+               try {
+                   imageSelectSpace.removeChild(imageBox);
+               } catch (e:Error) {
+               }
+           }
+       }
+       
+       private function getSelectBoxImageUrl(imageUrl:String):String {
+           if( Utils.isMovie(imageUrl) ) {
+               return Config.getInstance().getFileImageUrl();
+           }
+           return imageUrl
+       }
+       
+       public function tagNameChanged():void {
+           if( ! isImageListLoaded ) {
+               return;
+           }
+           
+           if( ! isImageTagLoaded ) {
+               return;
+           }
+           
+           cleanImageSelectSpace();
+           
+           var displayIndex:int = 0;
+           var targetImageType:String = tagName.text;
+           
+           for(var i:int = 0 ; i < imageInfos.length ; i++) {
+               var imageInfo:Object = imageInfos[i];
+               displayIndex = addImageBoxOnSelectSpaceIfTagMatched(targetImageType, imageInfo, displayIndex);
+           }
+           
+           allDisplayedCount = displayIndex;
+           printIndex(0);
+       }
+       
+       private function addImageBoxOnSelectSpaceIfTagMatched(targetImageType:String, imageInfo:Object,
+                                                             displayIndex:int):int {
+           var imageUrl:String = imageInfo.imageUrl as String;
+           var image:Image = imageInfo.image;
+           var imageBox:Box = imageInfo.imageBox;
+           
+           Log.logging("imageUrl:", imageUrl);
+           
+           //対象外なら処理なし
+           if( ! getImageVisible(imageUrl, targetImageType) ) {
+               return displayIndex;
+           }
+           
+           //対象の場合
+           var imageSource:String = getSelectBoxImageUrl(imageUrl);
+           
+           if( image.source != imageSource ) {
+               image.source = getSmallImageUrl(imageSource);
+           }
+           
+           imageSelectSpace.addChild(imageBox);
+           displayIndex++;
+           imageInfo.displayIndex = displayIndex;
+           Log.logging("isTarget.");
+           
+           return displayIndex;
+       }
+       
+       private var allDisplayedCount:int = 0;
+       
+       private function isAllTag(tag:String):Boolean {
+           return ( tag == ImageTag.getAllTag() );
+       }
+       
+       private function getImageVisible(imageUrl:String, targetImageType:String):Boolean {
+           Log.logging("getImageVisible imageUrl", imageUrl);
+           Log.logging("getImageVisible targetImageType", targetImageType);
+           
+           imageUrl = Config.getInstance().getOriginalUrlString(imageUrl);
+           Log.logging("ImageSelecter.getImageVisible imageUrl", imageUrl);
+           
+           var password:String = getPassword(imageUrl);
+           if( (password != "") && (password != currentPassword) ) {
+               if( ! DodontoF_Main.getInstance().getMentenanceModeOn() ) {
+                   return false;
+               }
+           }
+           
+           if( isAllTag(targetImageType) ) {
+               return true;
+           }
+           
+           var tags:Array = getTags(imageUrl);
+           return findInTags(tags, targetImageType);
+       }
+       
+       private function getPassword(imageUrl:String):String {
+           if( tagInfos == null ) {
+               return "";
+           }
+           
+           var tagInfo:Object = tagInfos[imageUrl];
+           if( tagInfo == null ) {
+               return "";
+           }
+           
+           var password:String = tagInfo["password"];
+           if( password == null ) {
+               return "";
+           }
+           
+           return password;
+       }
+       
+       public function getTags(imageUrl:String):Array {
+           if( tagInfos == null ) {
+               return new Array();
+           }
+           
+           var tagInfo:Object = tagInfos[imageUrl];
+           if( tagInfo == null ) {
+               return new Array();
+           }
+           
+           var tags:Array = tagInfo["tags"];
+           if( tags == null ) {
+               return new Array();
+           }
+           
+           return tags;
+       }
+       
+       private function getSmallImageUrl(imageUrl:String):String {
+           Log.logging("ImageSelecter getSmallImageUrl Begin");
+           var result:String = imageUrl;
+           
+           imageUrl = Config.getInstance().getOriginalUrlString(imageUrl);
+           Log.logging("imageUrl", imageUrl);
+           
+           if( tagInfos == null ) {
+               Log.logging("tagInfos is null, imageUrl", imageUrl);
+               return result;
+           }
+           
+           var tagInfo:Object = tagInfos[imageUrl];
+           if( tagInfo == null ) {
+               Log.logging("tagInfo is null, imageUrl", imageUrl);
+               return result;
+           }
+           
+           var smallImageUrl:String = tagInfo["smallImage"];
+           if( smallImageUrl == null ) {
+               Log.logging("smallImageUrl is null, imageUrl", imageUrl);
+               return result;
+           }
+           
+           smallImageUrl = Config.getInstance().getUrlString(smallImageUrl);
+           Log.logging("smallImageUrl", smallImageUrl);
+           
+           result = smallImageUrl;
+           
+           Log.logging("ImageSelecter getSmallImageUrl End", result);
+           
+           return result;
+       }
+       
+       private function findInTags(tags:Array, targetImageType:String):Boolean {
+           for(var i:int = 0 ; i < tags.length ; i++) {
+               var tag:String = tags[i];
+               Log.logging("ImageSelecter.findInTags tags tag", tag);
+               
+               if( tag == targetImageType ) {
+                   Log.logging("ImageSelecter.findInTags find.");
+                   return true;
+               }
+           }
+           
+           return false;
+       }
+       
+       public function setImageInputToolTip(text:String):void {
+           imageUrlInput.toolTip = text;
+       }
+       
+       public function setImageInputLabel(text:String):void {
+           imageUrlInputLabel.text = text;
+       }
+       
+    ]]>
+  </mx:Script>
+  
+</mx:Box>

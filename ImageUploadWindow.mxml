@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="650"
+   height="420"
+   title="{Language.s.imageUploader}" 
+   showCloseButton="true"
+   close="closeWindow()"
+   >
+  
+  <mx:Box width="100%" height="100%" horizontalAlign="center" verticalAlign="middle">
+    
+    <mx:Tile id="preview" 
+           height="100%" width="100%"
+           direction="horizontal" 
+           borderStyle="solid" 
+           paddingTop="1" paddingBottom="1" 
+           paddingRight="1" paddingLeft="1" 
+           verticalGap="2" horizontalGap="2" 
+           tileWidth="100" />
+  </mx:Box>
+  
+  <torgtaitai:ImageUploadSetInfo id="imageUploadSetInfo"
+                                 width="100%" horizontalAlign="center" verticalAlign="middle" />
+  
+  <mx:HBox height="50" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button label="{Language.s.selectUploadTargetImage}" click="selectUploadImage()" />
+    <mx:Spacer width="20" />
+    <mx:Button id="uploadButton" label="{Language.s.uploadImage}" click="uploadImageFile()" enabled="false"/>
+    <mx:Button label="{Language.s.closeButton}" click="closeWindow()" />
+  </mx:HBox>
+  
+  <mx:HBox  height="25" width="100%" horizontalAlign="center" verticalAlign="middle" >
+    <mx:Label text="{Language.s.executeResult}" />
+    <mx:Label id="result" width="100%" text="{Language.s.uploadImageIsNotSelected}" fontWeight="bold" />
+  </mx:HBox>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.core.UIComponent;
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.controls.TextArea;
+    import mx.controls.Alert;
+    import org.libspark.utils.ForcibleLoader;
+    
+    private var fileReferenceForUpload:FileReferenceList = new FileReferenceList();
+    private var previewLoaderComponentList:Array = new Array();
+    private var warningInfo:TextArea = new TextArea();
+    static private var previewSizeLimit:int = 100;
+    private var closeEvent:Function = null;
+    private var resultList:Array = new Array();
+    
+    public function setCloseEvent(function_:Function):void {
+        closeEvent = function_;
+    }
+    
+    public function closeWindow():void {
+        if( closeEvent != null ) {
+            closeEvent.call();
+        }
+        
+        PopUpManager.removePopUp(this);
+    }
+    
+    override protected function setup():void {
+        imageUploadSetInfo.imageTypeChanged();
+        imageUploadSetInfo.setUploadMode();
+        
+        if( ! Utils.isFileRefecenseLoadMethodSupportVersion() ) {
+            printWarningAboutSamnailNotSupport();
+            return;
+        }
+    }
+    
+    private function printWarningAboutSamnailNotSupport():void {
+        warningInfo.height = preview.height - 5;
+        warningInfo.width = preview.width - 5;
+        warningInfo.htmlText = Language.s.uploadImageFlashPlayerVersionWarningMessage;
+        
+        var component:UIComponent = new UIComponent();
+        preview.addChild(component);
+    }
+    
+    private function selectUploadImage():void {
+        try { 
+            fileReferenceForUpload.removeEventListener(Event.SELECT, this.complateUploadFileSelect)
+        } catch (e:Error) {
+        }
+        fileReferenceForUpload.addEventListener(Event.SELECT, this.complateUploadFileSelect)
+        
+        var filters:Array = new Array();
+        filters.push(new FileFilter(Language.s.imageFIleFormat,"*.jpg;*.jpeg;*.gif;*.png;*.swf;*.flv"));
+        fileReferenceForUpload.browse(filters);
+    }
+    
+    private var previewFileReferenceArray:Array = new Array();
+    
+    private var smallImages:Object = new Object();
+    
+    private function clearPreviewInfos():void {
+        while( previewFileReferenceArray.length > 0 ) {
+            previewFileReferenceArray.shift();
+        }
+        
+        while( previewLoaderComponentList.length > 0 ) {
+            var obj:DisplayObject = previewLoaderComponentList.shift();
+            preview.removeChild(obj);
+        }
+        
+        smallImages = new Object();
+    }
+    
+    private function complateUploadFileSelect(event:Event):void {
+        clearPreviewInfos();
+        
+        var previewFileReferenceList:FileReferenceList = FileReferenceList(event.target);
+        
+        for(var i:int = 0 ; i < previewFileReferenceList.fileList.length ; i++) {
+            var previewFileReference:FileReference = previewFileReferenceList.fileList[i] as FileReference;
+            previewFileReferenceArray.push(previewFileReference);
+            Log.logging(previewFileReference.name, "selected file.name");
+            
+            uploadButton.enabled = true;
+            result.text = Language.s.canUploadSeletedImage;
+            
+            if( ! Utils.isFileRefecenseLoadMethodSupportVersion() ) {
+                warningInfo.htmlText = Language.s.selectedFileName + previewFileReference.name;
+                return;
+            }
+            previewFileReference.addEventListener(Event.COMPLETE, setImage);
+            previewFileReference.load();
+        }
+    }
+    
+    private function setImage(event:Event):void {
+        var fileReference:FileReference = event.currentTarget as FileReference
+        
+        var previewLoader:Loader = new Loader();
+        var imageFileName:String = fileReference.name;
+        previewLoader.contentLoaderInfo.addEventListener(Event.COMPLETE, getCompleteHandlerOnPreviewLoader(imageFileName));
+        
+        if( Utils.isFlvFile( fileReference.name ) ) {
+            var movieImageUrl:String = Config.getInstance().getFileImageUrl();
+            var request:URLRequest = new URLRequest(movieImageUrl);
+            previewLoader.load( request );
+        } else if( Utils.isSwfFile( fileReference.name ) ) {
+            var fLoader:ForcibleLoader = new ForcibleLoader( previewLoader );
+            fLoader.loadBytes( fileReference.data );
+        } else {
+            previewLoader.loadBytes(fileReference.data);
+        }
+        
+        fileReference.removeEventListener(Event.COMPLETE, setImage);
+    }
+    
+    private function getCompleteHandlerOnPreviewLoader(imageFileName:String):Function {
+        return function(event:Event):void {
+            Log.logging("completeHandlerOnPreviewLoader(event:Event)");
+            getSmallImage(event, imageFileName);
+            
+            Log.logging("completeHandlerOnPreviewLoader(event:Event) end");
+        }
+    }
+    
+    private function getSmallImage(event:Event, imageFileName:String):void {
+        var loaderInfo:LoaderInfo = event.currentTarget as LoaderInfo;
+        if( loaderInfo == null ) {
+            Log.loggingTuning("getSmallImage currentTarget is NOT LoaderInfo");
+            return;
+        }
+        
+        var isPlayMovie:Boolean = false;
+        Utils.setImageVolume(loaderInfo.content, 0, isPlayMovie);
+        var previewLoader:Loader = loaderInfo.loader as Loader;
+        
+        var rates:Object = getSmallImageRates(previewLoader);
+        previewLoader.width *= rates.widthRate;
+        previewLoader.height *= rates.heightRate;
+        
+        var bitmap:Bitmap = new Bitmap();
+        var bitmapData:BitmapData = new BitmapData(previewLoader.width, previewLoader.height);
+        var matrix:Matrix = new Matrix();
+        matrix.scale(rates.widthRate, rates.heightRate);
+        bitmap.bitmapData = bitmapData;
+        bitmapData.draw(previewLoader, matrix);
+        
+        smallImages[imageFileName] = getSmallImageData(bitmap);
+        
+        var component:UIComponent = getPreviewComponent();
+        component.addChild(previewLoader);//bitmap);
+        
+        previewLoaderComponentList.push(component);
+        preview.addChild(component);
+    }
+    
+    static public function getSmallImageRates(previewLoader:Loader):Object {
+        var sizeInfo:Object = Utils.getSizeInfo(previewLoader, 0, 0, previewSizeLimit);
+        return getSmallImageRatesFromSizeInfo(sizeInfo);
+    }
+    
+    static public function getSmallImageRatesFromSizeInfo(sizeInfo:Object):Object {
+        var sizeLimit:int = previewSizeLimit;
+        
+        var result:Object = new Object();
+        
+        result.width = sizeInfo.width;
+        result.height = sizeInfo.height;
+        
+        if( result.width > sizeLimit ) {
+            result.height = result.height * (sizeLimit / result.width);
+            result.width = sizeLimit;
+        }
+        if( result.height > sizeLimit ) {
+            result.width = result.width * (sizeLimit / result.height);
+            result.height = sizeLimit;
+        }
+        
+        var rates:Object = {
+            widthRate : (1.0 * result.width / sizeInfo.width),
+            heightRate: (1.0 * result.height / sizeInfo.height)};
+        
+        return rates;
+    }
+    
+    private function uploadImageFile():void {
+        try {
+            resultList = new Array();
+            uploadButton.enabled = false;
+            result.text = Language.s.nowUploading;
+            
+            for(var i:int = 0 ; i < fileReferenceForUpload.fileList.length ; i++) {
+                var fileReference:FileReference = fileReferenceForUpload.fileList[i];
+                var imageFileName:String = fileReference.name;
+                var imageData:ByteArray = fileReference.data;
+                var smallImageData:ByteArray = smallImages[imageFileName];
+                var tagInfo:Object = imageUploadSetInfo.getTagInfo();
+                
+                uploadImageFileOne(imageFileName, imageData, smallImageData, tagInfo,
+                                 uploadImageFileResult, ioErrorHandler);
+            }
+        } catch(error:Error) {
+            Log.loggingException("ImageUploadWindow.uploadImageFile", error);
+        }
+    }
+    
+    private function getPreviewComponent():UIComponent {
+        var component:UIComponent = new UIComponent();
+        component.width = previewSizeLimit;
+        component.height = previewSizeLimit;
+        component.setStyle("verticalAlign", "middle");
+        component.setStyle("horizontalAlign", "center");
+        
+        return component;
+    }
+    
+    private function getSmallImageData(bitmap:Bitmap):ByteArray {
+        var pngEncoder:PNGEncoder = new PNGEncoder();
+        var bytes:ByteArray = pngEncoder.encode(bitmap.bitmapData);
+        
+        return bytes;
+    }
+    
+    public static function uploadImageFileOne(imageFileName:String, imageData:ByteArray, smallImageData:ByteArray, tagInfo:Object,
+                                            successResult:Function, errorResult:Function):void {
+        Log.logging("ImageUploadWindow.uploadImageFileOne begin");
+        
+        var params:Object = {"imageFileName": imageFileName,
+                             "tagInfo": tagInfo,
+                             "imageData": imageData,
+                             "smallImageData": smallImageData };
+        try {
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.uploadImageData(params, successResult, errorResult);
+        } catch (e:Error) {
+            Log.loggingException("uploadImageFileOne", e);
+        }
+        
+        Log.logging("ImageUploadWindow.uploadImageFileOne end");
+    }
+    
+    private function ioErrorHandler(event:Event):void {
+        resultList.push(Language.s.loadImageFileErrorMessage);
+        printResultList();
+    }
+    
+    
+    public function uploadImageFileResult(event:Event):void {
+        Log.loggingTuning("=>uploadImageFileResult(event:Event) Begin");
+        try {
+            Log.loggingTuning("event", event);
+            var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(event);
+            Log.loggingTuning("jsonData", jsonData);
+            
+            resultList.push( Language.getKeywordText(jsonData.resultText) );
+            
+            printResultList();
+        } catch(e:Error) {
+            Log.loggingException("uploadImageFileResult", e);
+        }
+        Log.loggingTuning("=>uploadImageFileResult(event:Event) End");
+    }
+    
+    private function printResultList():void {
+        Log.logging("printResultList Begin");
+        
+        if( resultList.length == fileReferenceForUpload.fileList.length ) {
+            result.text = getAllFinishResult(resultList);
+        } else {
+            result.text = Language.text("imageFileUploadingProgress", "" + resultList.length, "" + fileReferenceForUpload.fileList.length);
+        }
+        
+        Log.logging("printResultList End");
+    }
+    
+    private function getAllFinishResult(resultTextArray:Array):String {
+        var resultText:String = "";
+        
+        for(var i:int = 0 ; i < resultTextArray.length ; i++) {
+            var text:String = resultTextArray[i];
+            if( text != "OK" ) {
+                resultText += text + ", ";
+            }
+        }
+        
+        if( resultText == "" ) {
+            resultText = "OK";
+            imageUploadSetInfo.setPassword("");
+        } else {
+            resultText = "NG:" + resultText;
+        }
+        
+        Log.logging("getAllFinishResult resultText", resultText);
+        
+        return resultText;
+    }
+    
+             ]]>
+  </mx:Script>
+  
+</torgtaitai:CommonPopupWindow>

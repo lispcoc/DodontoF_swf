@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   x="200"
+   y="30"
+   width="770"
+   height="475"
+   title="{Language.s.changeMap}" 
+   showCloseButton="true"
+   >
+  
+  <torgtaitai:ImageSelecter id="imageSelecter" height="100%" width="100%" />
+  
+  <mx:HBox height="100" width="100%" horizontalAlign="center" verticalAlign="top">
+    
+    <mx:Box height="100%" width="100%" verticalAlign="middle">
+      
+      <mx:HBox height="25" width="100%" horizontalAlign="left" verticalAlign="middle">
+        <mx:CheckBox id="checkBoxWhiteMap" label="{Language.s.changeToBrankMap}" selected="false" change="checkWhiteMap()"/>
+	    <mx:Label text="{Language.s.mapHeight}" />
+        <mx:NumericStepper id="mapHeight" minimum="1" maximum="100" value="25" change="printPreview()" />
+	    <mx:Label text="{Language.s.mapWidth}" />
+        <mx:NumericStepper id="mapWidth" minimum="1" maximum="100" value="25" change="printPreview()" />
+	    <mx:Label text="{Language.s.mapLinePositionColor}" />
+        <mx:ColorPicker id="gridColorPicker" showTextField="true" selectedColor="0x000000" change="printPreview()" />
+	    <mx:Label text="{Language.s.mapGridGap}" />
+        <mx:NumericStepper id="gridInterval" minimum="1" maximum="100" value="1" change="printPreview()" />
+        <mx:Spacer width="20" />
+        <mx:CheckBox id="isAlternately" label="{Language.s.mapGridOdded}" selected="false" change="printPreview()"/>
+      </mx:HBox>
+      
+      <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+        <mx:Button id="executeButton" label="{Language.s.mapSet}" click="changeMap()" enabled="false" />
+        <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+      </mx:HBox>
+    </mx:Box>
+    
+  </mx:HBox>
+    
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.controls.Image;
+    
+    private var previewLoader:PreviewLoader = new PreviewLoader();
+    static private var mapMaxWidth:int = 100;
+    static private var mapMaxHeigth:int = 100;
+    
+    static public function setMaxWidthHeigth(mapMaxWidth_:int, mapMaxHeigth_:int):void {
+        mapMaxWidth = mapMaxWidth_;
+        mapMaxHeigth = mapMaxHeigth_;
+    }
+    
+    static public function getMapMaxWidth():int {
+        return mapMaxWidth;
+    }
+    
+    static public function getMapMaxHeigth():int {
+        return mapMaxHeigth;
+    }
+    
+    
+    override protected function setup():void {
+        var map:Map = DodontoF_Main.getInstance().getMap();
+        
+        imageSelecter.setMirrored(map.isMirrored());
+        imageSelecter.setTagDisplayVisible(true);
+        imageSelecter.addPreview(previewLoader);
+        
+        mapWidth.maximum = mapMaxWidth;
+        mapHeight.maximum = mapMaxHeigth;
+        
+        mapHeight.value = map.getHeight();
+        mapWidth.value = map.getWidth();
+        
+        imageSelecter.selectImageUrl( map.getImageUrl() );
+        gridColorPicker.selectedColor = map.getGridColor();
+        gridInterval.value = map.getGridInterval();
+        isAlternately.selected = map.isAlternatelyMode();
+        
+        checkBoxWhiteMap.selected = imageSelecter.isBlankImage();
+        imageSelecter.keepWhiteImage( checkBoxWhiteMap.selected );
+        
+        imageSelecter.setImageClickEventFunction(imageClickEvent);
+        imageSelecter.setImageLoadCompleteFunction(imageLoadComplete);
+        imageSelecter.setDefaultTags( [ImageTag.getNoneTag(), ImageTag.getMapTag(), ImageTag.getAllTag()] );
+        imageSelecter.initImage( false );
+        
+        printPreview();
+    }
+    
+    public function imageClickEvent(imageName:String):void {
+        if( checkBoxWhiteMap.selected ){
+            return;
+        }
+           
+        printPreview();
+    }
+             
+    public function imageLoadComplete():void {
+        executeButton.enabled = true;
+    }
+       
+    private function changeMap():void {
+        try{
+            var imageUrl:String = imageSelecter.getSelectedImageUrl();
+            var mirrored:Boolean = imageSelecter.isMirrored();
+            
+            var map:Map = DodontoF_Main.getInstance().getMap();
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.changeMap(imageUrl, mirrored,
+                                     mapWidth.value, mapHeight.value,
+                                     gridColorPicker.selectedColor,
+                                     gridInterval.value,
+                                     isAlternately.selected,
+                                     map.getMarks(),
+                                     map.getMarksAlpha());
+        
+            PopUpManager.removePopUp(this);
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+
+    private function printPreview():void {
+        var xCount:int = mapWidth.value;
+        var yCount:int = mapHeight.value;
+        
+        Log.logging("xCount", xCount);
+        Log.logging("yCount", yCount);
+        
+        var imageUrl:String = imageSelecter.getSelectedImageUrl();
+        Log.logging("imageUrl getLonged", imageUrl);
+        
+        previewLoader.loadImageWidthHeight(imageUrl, xCount, yCount, 6);
+        previewLoader.drawGrid( gridColorPicker.selectedColor, gridInterval.value, isAlternately.selected );
+        
+        setWidthHeigthFromImageUrlTagName(imageUrl);
+    }
+    
+    private function setWidthHeigthFromImageUrlTagName(imageUrl:String):void {
+        var imageUrlOrg:String = Config.getInstance().getOriginalUrlString(imageUrl);
+        Log.logging("imageUrlOrg", imageUrlOrg);
+        
+        var tags:Array = imageSelecter.getTags(imageUrlOrg);
+        Log.logging("tags", tags);
+        
+        for each(var tag:String in tags) {
+                //ここで縦NN横MMの数値部分が全角でもOKに変換する
+                tag = Utils.changeZenkakuToHankaku(tag);
+                
+                var result:Object = /^縦(\d+)横(\d+)$/.exec(tag);
+                if( result == null ) {
+                    continue;
+                }
+                
+                var heigth:int = parseInt(result[1]);
+                var width:int = parseInt(result[2]);
+                Log.logging("heigth", heigth);
+                Log.logging("width", width);
+                mapHeight.value = heigth;
+                mapWidth.value = width;;
+                break;
+            }
+    }
+    
+    private function checkWhiteMap():void {
+        imageSelecter.keepWhiteImage( checkBoxWhiteMap.selected );
+        
+        printPreview();
+    }
+
+    ]]>
+  </mx:Script>
+
+</torgtaitai:CommonPopupWindow>

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="700"
+   height="400"
+   title="{Language.s.addBotTableWindowTitle}"
+   showCloseButton="true"
+   >
+  
+  <mx:HBox width="100%" height="25">
+    <mx:Label text="{Language.s.botTableCommandName}：" />
+    <mx:TextInput id="commandText" width="100" />
+    <mx:Label text="{Language.s.botTableDiceText}：" />
+    <mx:TextInput id="diceText" width="50" />
+    <mx:Label text="{Language.s.botTableTitle}：" />
+    <mx:TextInput id="titleText" width="100%"/>
+  </mx:HBox>
+  
+  
+  <mx:HBox width="100%" height="25">
+    <mx:Label text="{Language.s.botTableText}：" />
+    <mx:Spacer width="100%" />
+    <mx:Label text="{Language.s.gameSystem}：" />
+    <mx:ComboBox id="diceBotGameType"
+                 labelField="name"
+                 rowCount="10"
+                 />
+  </mx:HBox>
+  <mx:TextArea id="tableText" text="" height="100%" width="100%" />
+  
+  <mx:HBox height="25" width="100%" verticalAlign="middle" horizontalAlign="center" >
+    <mx:Spacer width="50%" />
+    <mx:Button id="executeButton" label="{Language.s.botTableAddButton}" click="executeLocal()"  />
+    <mx:Spacer width="20" />
+    <mx:Button label="{Language.s.cancelButton}"  click="closeAction()" />
+    <mx:Spacer width="50%" />
+    <mx:Button id="sampleButton" label="{Language.s.botTablePrintSampleButton}"  click="printSample()" />
+  </mx:HBox>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.managers.PopUpManager;
+    import mx.controls.Label;
+    import mx.controls.Alert;
+    import mx.collections.ArrayCollection;
+    import mx.events.CloseEvent;
+    
+    /**
+     * ダイスボット用の表を追加する画面クラス
+     */
+    
+    
+    /**
+     * Window の初期化処理
+     */
+    override protected function setup():void {
+        var types:Object = Utils.clone(ChatWindow.getInstance().diceBotGameType.dataProvider);
+        types[0].gameType = "";
+        diceBotGameType.dataProvider = types;
+        
+        Utils.selectComboBox(diceBotGameType, firstGameType, "gameType");
+        initAfter();
+    }
+    
+    /**
+     * 「サンプル表示」ボタンの表示制御。
+     * このボタンはダイスボット表の変更画面では非表示にするために使います。
+     */
+    public function setVisiblePrintSampleButton(b:Boolean):void {
+        sampleButton.visible = b;
+    }
+    
+    /**
+     * 入力サンプルを表示します。
+     */
+    private function printSample():void {
+        commandText.text = "SAMPLE";
+        diceText.text = "2d6";
+        titleText.text = Language.s.botTableSample;
+        
+        var text:String = "";
+        text += Language.s.botTableSampleText_2;
+        text += Language.s.botTableSampleText_3;
+        text += Language.s.botTableSampleText_4;
+        text += Language.s.botTableSampleText_5;
+        text += Language.s.botTableSampleText_6;
+        text += Language.s.botTableSampleText_7;
+        text += Language.s.botTableSampleText_8;
+        text += Language.s.botTableSampleText_9;
+        text += Language.s.botTableSampleText_10;
+        text += Language.s.botTableSampleText_11;
+        text += Language.s.botTableSampleText_12;
+        tableText.text = text;
+    }
+    
+    protected var window:ManageBotTableWindow;
+    private var firstGameType:String = "";
+    
+    /**
+     * 初期化処理。
+     * @window_ ダイスボット表の管理画面
+     * @command 表コマンドの初期値
+     * @dice ダイスロールのコマンド文字(xDy)
+     * @titleText_ 表のタイトル
+     * @tableText_ 表の一覧情報
+     */
+    public function init(window_:ManageBotTableWindow,
+                         command:String = "",
+                         dice:String = "",
+                         titleText_:String = "",
+                         tableText_:String = "",
+                         gameType:String = ""):void {
+        window = window_;
+        
+        commandText.text = command;
+        diceText.text = dice;
+        titleText.text = titleText_;
+        tableText.text = tableText_;
+        firstGameType = gameType;
+        Utils.selectComboBox(diceBotGameType, firstGameType, "gameType");
+        
+        initAfter();
+    }
+    
+    
+    /**
+     * 初期化後の追加処理。
+     * ダイスボット表変更画面で追加処理を入れるために使います。
+     */
+    public function initAfter():void {
+    }
+    
+    /**
+     * 実行ボタン処理。
+     */
+    public function executeLocal():void {
+        executeButton.enabled = false;
+        status = "";
+        
+        execute();
+    }
+    
+    /**
+     * 表追加処理
+     */
+    public function execute():void {
+        var gameType:String = diceBotGameType.selectedItem.gameType;
+        
+        window.addBotTable(commandText.text, diceText.text, titleText.text,
+                           getTableTextFromTextArea(),
+                           gameType, checkResult);
+    }
+    
+    /**
+     * テキストエリアの文字列は改行コードが特殊なのでここで加工
+     */
+    protected function getTableTextFromTextArea():String {
+        var text:String = tableText.text;
+        
+        text = text.replace(/\r/g, "\n");
+        Log.logging("getTableTextFromTextArea text", text);
+        
+        return text;
+    }
+    
+    /**
+     * 表追加・変更処理が成功したかのチェック処理。
+     */
+    public function checkResult(jsonData:Object):Boolean {
+        if( jsonData.resultText == 'OK' ) {
+            closeAction();
+            return true;
+        }
+        
+        status = Language.getKeywordText( jsonData.resultText );
+        executeButton.enabled = true;
+        return false;
+    }
+    
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

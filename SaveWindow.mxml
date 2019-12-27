@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="300"
+   height="120"
+   title="{Language.s.save}" 
+   showCloseButton="true"
+   >
+  
+  <mx:Box id="loadingMessageBox" height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Label id="loadingMessage" text="{Language.s.saveInfomation}"/>
+    <mx:Label id="loadingMessage2" text="" height="0" visible="false" />
+  </mx:Box>
+  <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button id="readyButton" label="{Language.s.initSaveData}" click="executeServerSaveLocal()" />
+    <mx:Button id="saveButton" label="{Language.s.saveSaveData}" click="this.save()" enabled="false" />
+    <mx:Button label="{Language.s.cancelButton}" click="cancelAction()" />
+  </mx:HBox>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.utils.StringUtil;
+    import mx.controls.Alert;
+    
+    private var saveFileName:String = "";
+    private var thisObj:SaveWindow;
+    private var manualDownload:Boolean = false;
+    
+    override protected function setup():void {
+        Log.loggingTuning("=>setup() Begin");
+        try {
+            thisObj = this;
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+        Log.loggingTuning("=>setup() End");
+    }
+    
+    protected function cancelAction():void {
+        
+        // ダウンロード失敗時のフォロー
+        if(manualDownload){
+            var url:URLRequest = new URLRequest(saveFileName);
+            navigateToURL(url,"_blank");
+        }
+
+        PopUpManager.removePopUp(this);
+    }
+
+    protected function executeServerSaveLocal():void {
+        readyButton.enabled=false;
+        loadingMessage.text = Language.s.saveDataSetting;
+        
+        executeServerSave();
+    }
+    protected function executeServerSave():void {
+        var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+        guiInputSender.save(this.resultFuction);
+    }
+    
+    protected function getReadyMessage():String {
+        return Language.s.saveDataReady;
+    }
+    
+    protected function resultFuction(event:Object):void {
+        try {
+            var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(event);
+            
+            if( jsonData.result != "OK" ) {
+                Alert.show(jsonData.resultText);
+                return;
+            }
+            
+            saveFileName = jsonData.saveFileName;
+            Log.logging("saveFileName : " + saveFileName);
+            saveButton.enabled = true;
+            loadingMessage.text = getReadyMessage();
+            
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    public function save():void {
+        Log.loggingTuning("=>save Begin");
+        try {
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.saveFileDownload(saveFileName,
+                                            function():void {
+                                                PopUpManager.removePopUp(thisObj);
+                                            });
+            saveButton.enabled = false;
+            
+            loadingMessage.text = Language.s.nowSaving;
+
+            // ダウンロード失敗時のフォロー
+            if(saveFileName.match(/\.gz$/)){
+                manualDownload = true;
+                loadingMessage2.text = Language.s.whenDownloadDoNotBeginWarning;
+            }
+
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+        Log.loggingTuning("=>save End");
+    }
+
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

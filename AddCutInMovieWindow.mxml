@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="750"
+   height="500"
+   title="{Language.s.addCutInWindowTitle}"
+   showCloseButton="true"
+   >
+  
+  <mx:Box width="100%" height="100%">
+    
+    <torgtaitai:ImageSelecter id="imageSelecter" height="100%" width="100%" />
+    
+    <!--<mx:HBox height="170" width="100%"> -->
+    <mx:HBox height="200" width="100%">
+      <mx:Form height="100%" width="50%">
+	    <mx:FormItem label="{Language.s.cutInTitle}:">
+          <mx:TextInput id="message" width="200" text="" />
+        </mx:FormItem>
+        
+	    <mx:FormItem label="{Language.s.cutInDisplaySecondsLabel}" >
+          <mx:NumericStepper id="displaySeconds" minimum="0" maximum="300" value="0" stepSize="0.1"
+      />
+        </mx:FormItem>
+	    <mx:Label text="{Language.s.cutInDisplaySecondsTips}" />
+        
+	    <mx:FormItem label="{Language.s.cutInVolumeLabel}" >
+          <mx:HSlider id="volume"
+                      width="150"
+                      liveDragging="true"
+                      showTrackHighlight="true"
+                      maximum="1"
+                      minimum="0"
+                      value="0.1"
+                      snapInterval="0.01"
+                      />
+        </mx:FormItem>
+	    <mx:FormItem label="{Language.s.cutInMatchWithChatTail}" toolTip="{Language.s.cutInMatchWithChatTailTips}">
+          <mx:CheckBox id="isTail" selected="true"/>
+        </mx:FormItem>
+      </mx:Form>
+      
+      <mx:Box height="100%" width="50%">
+        
+	    <mx:FormItem label="{Language.s.cutInBgm}:" >
+          <mx:HBox height="100%" width="100%">
+            <mx:TextInput id="soundSourceEdit" width="90" text="" />
+            <mx:CheckBox id="isSoundLoopCheck" label="{Language.s.cutInBgmLoop}" selected="false" />
+          </mx:HBox>
+        </mx:FormItem>
+        
+	    <mx:FormItem label="{Language.s.cutInPosition}:" >
+          <mx:ComboBox id="positionComboBox"  fontWeight="normal" editable="false"
+                       selectedIndex="3"
+                       toolTip="{Language.s.cutInPositionTips}">
+            <mx:Object label="{Language.s.cutInPositionLeftUp}"   data="up,left"  />
+            <mx:Object label="{Language.s.cutInPositionRightUp}"   data="up,right" />
+            <mx:Object label="{Language.s.cutInPositionUp}"     data="up"       />
+            <mx:Object label="{Language.s.cutInPositionCenter}"   data="center"   />
+            <mx:Object label="{Language.s.cutInPositionRight}"     data="right"    />
+            <mx:Object label="{Language.s.cutInPositionLeft}"     data="left"     />
+          </mx:ComboBox>
+        </mx:FormItem>
+        
+        <mx:HBox width="100%">
+	      <mx:Label text="{Language.s.cutInSizeWidth}:" />
+          <mx:NumericStepper id="imageWidth" minimum="0" maximum="1000" value="0" stepSize="1" width="60" />
+	      <mx:Label text="{Language.s.cutInSizeHeight}:" />
+          <mx:NumericStepper id="imageHeight" minimum="0" maximum="1000" value="0" stepSize="1" width="60" />
+	      <mx:Label text="{Language.s.cutInSizeDot}" />
+        </mx:HBox>
+        
+        <mx:Spacer height="10" width="100%" />
+        
+	    <mx:FormItem label="{Language.s.cutInTagLabel}:"  toolTip="{Language.s.cutInTagTips}" >
+        <mx:TextInput id="cutInTag" width="100" text="" />
+        </mx:FormItem>
+        
+        <mx:Spacer height="10" width="100%" />
+        
+        <mx:Button label="{Language.s.cutInPreview}" click="previewCutIn()" />
+        
+      </mx:Box>
+    </mx:HBox>
+    
+    <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle">
+      <mx:Button id="executeButton" label="{Language.s.addButton}" click="execute()" />
+      <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+    </mx:HBox>
+    
+    
+  </mx:Box>
+  <mx:Script>
+    <![CDATA[
+    import mx.controls.Alert;
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.controls.Image;
+    import mx.core.UIComponent;
+    
+    
+    /**
+     * カットイン追加画面
+     */
+    
+    
+    private var cutIn:CutInMovie = new CutInMovie();
+    private var previewImage:Image = new Image();
+    
+    
+    /**
+     * Window の初期化処理
+     */
+    override protected function setup():void {
+        initPreview();
+        
+        imageSelecter.setImageInputLabel(Language.s.cutInImageSourceLabel);
+        imageSelecter.setImageInputToolTip(Language.s.cutInImageSourceTips);
+        
+        imageSelecter.addPreview(previewImage, 200);
+        imageSelecter.setMoviewFileSelectable(true);
+        
+        if( imageSelecter.isBlankImage() ) {
+            imageSelecter.selectImageUrl( Config.defaultImageUrl );
+        }
+        
+        imageSelecter.setImageClickEventFunction(imageClickEvent);
+        imageSelecter.setImageLoadCompleteFunction(imageLoadComplete);
+        imageSelecter.setDefaultTags( getDefaultTags() );
+        imageSelecter.initImage( isLoadInitImageList() );
+    }
+    
+    /**
+     * カットインのプレビューを初期化
+     */
+    private function initPreview():void {
+        previewImage.height = 200;
+        previewImage.width = 200;
+        previewImage.visible = true;
+    }
+    
+    /**
+     * カットインの画像・動画を選択するときに優先して表示するタグ名の一覧
+     */
+    protected function getDefaultTags():Array {
+        return [ImageTag.getNoneTag(), ImageTag.getAllTag()];
+    }
+    
+    /**
+     * カットインの画像・動画の選択一覧が画面を開いた時点で表示されているかを指定。
+     */
+    protected function isLoadInitImageList():Boolean {
+        return false;
+    }
+    
+    
+    /**
+     * 画像一覧選択時のプレビュー画像更新処理
+     */
+    public function imageClickEvent(imageName:String):void {
+        printPreview();
+    }
+    
+    /**
+     * プレビュー画像読み込み完了時の処理
+     */
+    public function imageLoadComplete():void {
+    }
+    
+    /**
+     * プレビュー画像更新処理
+     */
+    protected function printPreview():void {
+        var imageSourceText:String = imageSelecter.getSelectedImageUrl();
+        Log.logging("printPreview imageSourceText", imageSourceText);
+        
+        checkImageUrl(imageSourceText);
+        
+        var imageUrl:String = imageSelecter.getImageUrlChanger().getLong( imageSourceText );
+        if( CutInMovie.isMovie(imageSourceText) ) {
+            imageUrl = Config.getInstance().getFileImageUrl();
+        }
+        
+        previewImage.visible = true;
+        previewImage.height = 200;
+        
+        Log.logging("imageUrl", imageUrl);
+        previewImage.source = imageUrl;
+    }
+    
+    
+    /**
+     * カットインに指定したソースがYoutube等の外部URLの場合、
+     * 外部URL有効でないと表示できないので警告を表示
+     */
+    protected function checkImageUrl(imageSourceText:String):void {
+        this.status = "";
+        if(  DodontoF_Main.getInstance().canUseExternalImage() ) {
+            return;
+        }
+        
+        if( Utils.isYoutubeUrl(imageSourceText) ) {
+            this.status = Language.s.cutInYoutubeUrlTips;
+        }
+    }
+    
+    /**
+     * カットインを作るために必要なパラメータをここで作製。
+     */
+    protected function getCommandParams():Object {
+        if( message.text == "" ) {
+            Alert.show(Language.s.cutInInputTitleWarning);
+            return null;
+        }
+        
+        var imageUrl:String = imageSelecter.getSelectedImageUrl();
+        if( imageUrl == "" ) {
+            Alert.show(Language.s.cutInInputImageSourceWarning);
+            return null;
+        }
+        
+        var soundSource:String = soundSourceEdit.text;
+        var isSoundLoop:Boolean = isSoundLoopCheck.selected;
+        var position:String = positionComboBox.selectedItem.data;
+        
+        var params:Object = {
+            "message": message.text,
+            "source": imageUrl,
+            "soundSource": soundSource,
+            "isSoundLoop": isSoundLoop,
+            "volume": volume.value,
+            "isTail": isTail.selected,
+            "width": imageWidth.value,
+            "height": imageHeight.value,
+            "position" : position,
+            "displaySeconds": displaySeconds.value,
+            "cutInTag": cutInTag.text };
+        
+        return params;
+    }
+    
+    
+    /**
+     * カットイン追加処理の実行。
+     */
+    protected function execute():void {
+        var params:Object = getCommandParams();
+        if( params == null ) {
+            return;
+        }
+        
+        CutInBase.cutInInfos.push(params);
+        
+        var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+        guiInputSender.addEffect(params);
+        
+        PopUpManager.removePopUp(this)
+    }
+    
+    
+    /**
+     * カットインのプレビュー表示を実行。
+     */
+    private function previewCutIn():void {
+
+        var params:Object = getCommandParams();
+        if( params == null ) {
+            return;
+        }
+        
+        var commandText:String = cutIn.getCutInMessage(params);
+        cutIn.setEffectable(true);
+        cutIn.effect(commandText);
+    }
+
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

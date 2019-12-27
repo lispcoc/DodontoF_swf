@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="500"
+   height="315"
+   title="{Language.s.addMagicRangeDD3rdWindowTitle}" 
+   showCloseButton="true"
+   >
+  
+  <mx:Form>
+	<mx:FormItem label="{Language.s.magicRangeName}:">
+	  <mx:TextInput id="magicRangeName" text="" />
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.magicRangeFeets}:">
+	  <mx:NumericStepper id="magicRangeFeets" minimum="5" maximum="100" value="5" stepSize="5" />
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.magicRangeType}:">
+      <mx:ComboBox id="magicRangeType" width="100%" editable="false">
+        <mx:Object data="circle" label="{Language.s.magicRangeTypeCircle}" />
+        <mx:Object data="corn1" label="{Language.s.magicRangeTypeCorn1}" />
+        <mx:Object data="corn2" label="{Language.s.magicRangeTypeCorn2}" />
+        <mx:Object data="corn3" label="{Language.s.magicRangeTypeCorn3}" />
+        <mx:Object data="corn4" label="{Language.s.magicRangeTypeCorn4}" />
+        <mx:Object data="corn5" label="{Language.s.magicRangeTypeCorn5}" />
+        <mx:Object data="corn6" label="{Language.s.magicRangeTypeCorn6}" />
+        <mx:Object data="corn7" label="{Language.s.magicRangeTypeCorn7}" />
+        <mx:Object data="corn8" label="{Language.s.magicRangeTypeCorn8}" />
+        <mx:Object data="square" label="{Language.s.magicRangeTypeSquare}" />
+      </mx:ComboBox>
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.magicRangeColor}:">
+    <mx:ColorPicker id="magicRangeColorPicker" showTextField="true" selectedColor="0x000000" />
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.magicRangeTimeRange}:">
+      <mx:HBox width="100%" horizontalGap="0">
+        <mx:Label id="magicRangeRestTime" text="" width="0"/>
+	    <mx:NumericStepper id="magicRangeTimeRange" minimum="1" maximum="99" value="1" change="setMagicRangeRestTime()" />
+      </mx:HBox>
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.initiativeWindowColumnTitleInfo}:">
+	  <mx:TextInput id="magicRangeInfo" text="" />
+	</mx:FormItem>
+    <mx:CheckBox id="isShowOnInitiativeWindow" label="{Language.s.isShowOnInitiativeWindow}" selected="true" />
+  </mx:Form>
+  
+  <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button id="executeButton" label="{Language.s.addButton}" click="execute()" />
+    <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+  </mx:HBox>
+
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.events.FlexEvent;
+    
+    
+    /**
+     * D&D3.x版の魔法範囲の追加画面
+     */
+    
+    private var characterPositionX:int;
+    private var characterPositionY:int;
+    
+    /**
+     * 魔法範囲の初期配置座標を指定
+     */
+    public function setCharacterPosition(x:int = 1, y:int = 1):void {
+        characterPositionX = x;
+        characterPositionY = y;
+    }
+    
+    /**
+     * Windowの初期化処理
+     */
+    override protected function setup():void {
+    }
+    
+    
+    /**
+     * 魔法範囲の残り時間表示用処理。追加画面では不要のため処理無し。
+     */
+    public function setMagicRangeRestTime():void {
+    }
+    
+    /**
+     * 魔法範囲の追加処理
+     */
+    public function execute():void {
+        try{
+            var roundTimer:RoundTimer = DodontoF_Main.getInstance().getRoundTimer();
+            
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.addMagicRange(magicRangeName.text,
+                                         magicRangeFeets.value,
+                                         magicRangeType.selectedItem.data,
+                                         ("0x" + magicRangeColorPicker.selectedColor.toString(16)),
+                                         magicRangeTimeRange.value,
+                                         roundTimer.getCurrentRound(),
+                                         roundTimer.getCurrentInitiative(),
+                                         magicRangeInfo.text,
+                                         characterPositionX,
+                                         characterPositionY,
+                                         isHide());
+            
+            PopUpManager.removePopUp(this);
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    /**
+     * 画面のチェックは「イニシアティブ表に表示させる」もので、
+     * 魔法範囲が持つ属性は「非表示にさせるか」というもの。
+     * 真偽が逆になるのがややこしいのでここで変換して処理します。
+     */
+    protected function isHide():Boolean {
+        return ( ! isShowOnInitiativeWindow.selected )
+    }
+    
+    ]]>
+  </mx:Script>
+  
+</torgtaitai:CommonPopupWindow>

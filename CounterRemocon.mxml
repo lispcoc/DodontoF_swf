@@ -1,0 +1,856 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:ResizableWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*"
+   visible="false"
+   showCloseButton="true"
+   >
+  
+  <mx:Tile id="buttonTile" width="100%" height="100%"
+      paddingLeft="0"
+      paddingRight="0"
+           >
+  </mx:Tile>
+  
+  <mx:HBox width="100%" height="15"
+           horizontalAlign="center"
+           verticalGap="1"
+           > 
+    <mx:Button label="{Language.s.saveCounterRemoconButton}" click="saveButtons()" height="15" fontWeight="normal" paddingLeft="1" paddingRight="1" />
+    <mx:Button label="{Language.s.loadCounterRemoconButton}" click="loadButtons()" height="15" fontWeight="normal" paddingLeft="1" paddingRight="1" />
+    <mx:Spacer width="100%" />
+    <mx:Button label="{Language.s.addCounterRemoconButton}" click="addButton()" height="15" fontWeight="normal" paddingLeft="1" paddingRight="1" />
+  </mx:HBox>
+    
+  <mx:Script>
+
+    <![CDATA[
+    
+        import flash.geom.Point;
+        import mx.containers.HBox;
+        import mx.controls.Alert;
+        import mx.controls.Button;
+        import mx.controls.Menu;
+        import mx.controls.TextInput;
+        import mx.core.Application;
+        import mx.core.IFlexDisplayObject;
+        import mx.core.UIComponent;
+        import mx.events.MenuEvent;
+        import mx.utils.StringUtil;
+        
+        /** 
+         * カウンターリモコンウィンドウ用のクラス
+         */
+        
+        //{0} キャラクター名
+        //{1} カウンター名
+        //{2} 修正値
+        private var buttonInfos:Array = null;
+        
+        private var buttonDefaultInfos:Array = [
+    {label:Language.s.counterRemoconSampleTitle_1,
+     counterName: "HP",
+     operator: "minus",
+     modifyValue: "1D6+1",
+     messageFormat:Language.s.counterRemoconSampleInfo_1},
+    {label:Language.s.counterRemoconSampleTitle_2,
+     counterName: "HP",
+     operator: "plus",
+     modifyValue: "",
+     messageFormat:Language.s.counterRemoconSampleInfo_2},
+    {label:Language.s.counterRemoconSampleTitle_3,
+     counterName: "#INI",
+     operator: "equal",
+     modifyValue: "1D20+1",
+     messageFormat:Language.s.counterRemoconSampleInfo_3},
+    {label:Language.s.counterRemoconSampleTitle_4,
+     counterName: Language.s.counterRemoconSampleCounterName_4,
+     operator: "plus",
+     modifyValue: 1,
+     messageFormat:Language.s.counterRemoconSampleInfo_5},
+    {}];
+        
+        
+        private var saveLoadLocalFile:SaveLoadLocalFile = new SaveLoadLocalFile();
+        
+        
+        static private var thisObj:CounterRemocon;
+        
+        static public function getInstance():CounterRemocon {
+            return thisObj;
+        }
+        
+        public function setInitPosition():void {
+            setLoadAddAction( loadSaveDataFromLocalCash );
+            
+            if( loadPosition() ) {
+                return;
+            }
+            
+            setInitPositionDefault();
+        }
+
+        
+        private function loadSaveDataFromLocalCash(info:Object):void {
+            var buttonInfosSaveData:Array = Utils.getJsonDataFromString(info.buttonInfos) as Array;
+            if( buttonInfosSaveData == null ) {
+                return;
+            }
+            
+            buttonInfos = buttonInfosSaveData;
+        }
+        
+        
+        override protected function getWindowInfoSaveData(window:IFlexDisplayObject):Object {
+            var info:Object = super.getWindowInfoSaveData(this);
+            info.buttonInfos = Utils.getJsonString(buttonInfos);
+            
+            return info;
+        }
+        
+        
+        override public function setInitPositionDefault():void {
+            this.x = 30;
+            this.y = 70
+            this.width = 230;
+            this.height = 160;
+        }
+    
+        override public function getSaveInfoKeyName():String {
+            return "CounterRemocon";
+        }
+        
+        private var dice:Dice = null;
+        
+        override public function setup():void {
+            thisObj = this;
+            setTitle();
+            setInitPosition();
+            
+            initButtons();
+            setContextMenu();
+            
+            saveLoadLocalFile.init(Language.s.counterRemoconSaveData, "json", "CounterRemocon",
+                                   function(saveData:Object):void { loadSaveData(saveData) } );
+        }
+        
+        public function setTitle():void {
+            this.title=Language.s.counterRemocon
+        }
+        
+        private function setContextMenu():void {
+            var menu:ContextMenu = new ContextMenu();
+            menu.hideBuiltInItems();
+            
+            MovablePiece.addMenuItem(menu, Language.s.addCounterRemoconButton, function():void {addButton()} );
+            this.contextMenu = menu;
+        }
+        
+        private function addButton():void {
+            var window:ChangeCounterRemoconWindow
+            = DodontoF.popup(ChangeCounterRemoconWindow, true) as ChangeCounterRemoconWindow;
+        }
+        
+        private function initButtons():void {
+            if( buttonInfos == null ) {
+                buttonInfos = buttonDefaultInfos;
+            }
+            
+            clearButtons();
+            
+            for(var i:int = 0 ; i < buttonInfos.length ; i++) {
+                var params:Object = buttonInfos[i];
+                if( params.label == null ) {
+                    continue;
+                }
+                
+                var button:Button = createButton(params, i);
+                buttonTile.addChild(button);
+            }
+            
+            savePosition();
+        }
+        
+        private function clearButtons():void {
+            var buttonList:Array = buttonTile.getChildren();
+            
+            for(var i:int = 0 ; i < buttonList.length ; i++) {
+                var button:Button = buttonList[i] as Button;
+                if( button == null ) {
+                    continue;
+                }
+                
+                try {
+                    buttonTile.removeChild(button);
+                } catch (e:Error) {
+                    Log.loggingError("buttonTile.removeChild error");
+                }
+            }
+        }
+        
+        private function createButton(params:Object, index:int):Button {
+            var button:Button = new Button();
+            
+            button.label = params.label;
+            button.height = 50;
+            button.maxWidth = 200;
+            button.setStyle("paddingLeft", 0);
+            button.setStyle("paddingRight", 0);
+            button.setStyle("fontSize", 10);
+            
+            button.addEventListener(MouseEvent.CLICK, function(event:MouseEvent):void {
+                    Log.logging("click!");
+                    thisObj.popupCharacterList(button, index);
+                    Log.logging("click end");
+                });
+            
+            initCharacterListPopupContextMenu(button, index);
+            
+            return button;
+        }
+        
+        private function initCharacterListPopupContextMenu(button:Button, index:int):void {
+            var menu:ContextMenu = new ContextMenu();
+            menu.hideBuiltInItems();
+            
+            MovablePiece.addMenuItem(menu, Language.s.changeCounterRemoconButton, function():void{
+                    var window:ChangeCounterRemoconWindow = DodontoF.popup(ChangeCounterRemoconWindow, true) as ChangeCounterRemoconWindow;
+                    window.setParams( buttonInfos[index], index );
+                });
+            
+            MovablePiece.addMenuItem(menu, Language.s.deleteCounterRemoconButton, function():void{
+                    buttonInfos.splice(index, 1);
+                    initButtons();
+                }, true);
+            
+            MovablePiece.addMenuItem(menu, Language.s.cloneCounterRemoconButton, function():void{
+                    var button:Object = Utils.clone(buttonInfos[index]);
+                    buttonInfos.splice(index + 1, 0, button);
+                    initButtons();
+                }, true);
+            
+            MovablePiece.addMenuItem(menu, Language.s.moveRightCounterRemoconButton, function():void{
+                    if( (index + 1) == buttonInfos.length ) {
+                        return;
+                    }
+                    
+                    var button:Object = buttonInfos[index];
+                    buttonInfos.splice(index, 1);
+                    buttonInfos.splice(index + 1, 0, button);
+                    initButtons();
+                }, true);
+            
+            MovablePiece.addMenuItem(menu, Language.s.moveLeftCounterRemoconButton, function():void{
+                    if( index == 0 ) {
+                        return;
+                    }
+                    
+                    var button:Object = buttonInfos[index];
+                    buttonInfos.splice(index, 1);
+                    buttonInfos.splice(index - 1, 0, button);
+                    initButtons();
+                }, false);
+            
+            button.contextMenu = menu;
+        }
+        
+        
+        private function popupCharacterList(parent:UIComponent, index:int):void {
+            Log.logging("popupCharacterList Begin, index", index);
+            
+            setTitle();
+            
+            var params:Object = buttonInfos[index];
+            Log.logging("params", params);
+            
+            var menuDataList:Array = getCharacterListMenuData(params);
+            popupMenu(parent, menuDataList, clickPopupCharacterListHandler);
+            
+            Log.logging("popupCharacterList End");
+        }
+        
+        
+        private function getCharacterListMenuData(params:Object):Array {
+            var menuDataList:Array = [];
+            
+            var resourceMenuInfo:Object = getMenuInfoForResource(params);
+            if( resourceMenuInfo != null) {
+                menuDataList.push(resourceMenuInfo);
+                return menuDataList;
+            }
+            
+            
+            var characters:Array = DodontoF_Main.getInstance().getDodontoF().getLoingUserCharacterList();
+            
+            for(var i:int = 0 ; i < characters.length ; i++) {
+                var character:Character = characters[i];
+                var info:Object = getMenuInfo(character, params);
+                if( info == null ) {
+                    continue;
+                }
+                
+                menuDataList.push(info);
+            }
+            
+            var others:Array = getOtherCharactersMenu(characters, params);
+            
+            if( others.length > 0 ) {
+                var childrenInfo:Object = {
+                    label: Language.s.toOthersCounterRemoconButton,
+                    children: others };
+                
+                menuDataList.push(childrenInfo);
+            }
+            
+            return menuDataList;
+        }
+        
+        
+        
+        private function getMenuInfoForResource(params:Object):Object {
+            if( ! isExistOnResourceWindow(params.counterName) ) {
+                return null;
+            }
+            
+            var info:Object = {
+                isResource: true,
+                label: Language.s.resourceWindowTitle,
+                character: null,
+                pickupCharacter: null,
+                params: params,
+                type: "normal" };
+            
+            if( isSelectValue(params.modifyValue) ) {
+                info.children = getValueSelectMenu(params, "isResource", true);
+            }
+            
+            return info;
+        }
+        
+        private function isExistOnResourceWindow(counterName:String):Boolean {
+            var target:Object = ResourceWindow.getInstance().getResourceItem(counterName);
+            return ( target != null);
+        }
+        
+        
+        private function getMenuInfo(character:Character, params:Object):Object {
+            if( character == null ) {
+                return null;
+            }
+            
+            var info:Object = {
+                label: character.getName(),
+                character: character,
+                pickupCharacter: character,
+                params: params,
+                type: "normal" };
+            
+            if( isSelectValue(params.modifyValue) ) {
+                info.children = getValueSelectMenu(params, "character", character);
+            }
+            
+            return info;
+        }
+        
+        private function isSelectValue(value:String):Boolean {
+            if( value == "" ) {
+                return true;
+            }
+            return false;
+        }
+        
+        
+        private function getValueSelectMenu(params:Object, keyName:String, info:Object):Array {
+            var result:Array = [];
+            
+            for(var i:int = 0 ; i < 10 ; i++) {
+                var tensPlace:int = i * 10;
+                var children:Array = [];
+                for(var j:int = 0 ; j < 10 ; j++) {
+                    var value:int = tensPlace + j;
+                    var valueInfo:Object = getValueMenuItem(params, keyName, info, value);
+                    children.push(valueInfo);
+                }
+                
+                var tensPlaceInfo:Object = {
+                    label: ("" + tensPlace + "〜" + (tensPlace + 9)),
+                    children: children,
+                    type: "normal" };
+                
+                result.push(tensPlaceInfo);
+            }
+            
+            return result;
+        }
+        
+        private function getValueMenuItem(params:Object, keyName:String, info:Object, value:int):Object {
+            var params:Object = Utils.clone(params);
+            
+            params.modifyValue = "" + value;
+            
+            var valueString:String = "+" + value;
+            if( params.operator == "minus" ) {
+                valueString = "-" + value;
+            } else if( params.operator == "equal" ){
+                valueString = "= " + value;
+            }
+            
+            var valueInfo:Object = {
+                label: valueString,
+                params: params,
+                type: "normal" };
+            valueInfo[keyName] = info;
+            
+            return valueInfo;
+        }
+        
+        private function getOtherCharactersMenu(exists:Array, params:Object):Array {
+            var menuDataList:Array = [];
+            var characters:Array = DodontoF_Main.getInstance().getMap().findExistPiecesByTypeName(Character.getTypeStatic());
+            
+            characters = deleteHiddenCharacter(characters);
+            
+            characters.sort( function(a:Character, b:Character):int {
+                    return a.getName().localeCompare(b.getName());} );
+            
+            for(var i:int = 0 ; i < characters.length ; i++) {
+                var character:Character = characters[i];
+                
+                if( isInclude(exists, character) ) {
+                    continue;
+                }
+                
+                var info:Object = getMenuInfo(character, params);
+                if( info == null ) {
+                    continue;
+                }
+                menuDataList.push(info);
+            }
+            
+            
+            return menuDataList;
+        }
+        
+        
+        private function deleteHiddenCharacter(characters:Array):Array {
+            var result:Array = [];
+            
+            for(var i:int = 0 ; i < characters.length ; i++) {
+                var character:Character = characters[i];
+                
+                if( character.isHideMode() ) {
+                    continue;
+                }
+                
+                result.push(character);
+            }
+            
+            return result;
+        }
+        
+        
+        private function isInclude(exists:Array, character:Character):Boolean {
+            for(var i:int = 0 ; i < exists.length ; i++) {
+                if( exists[i].getId() == character.getId() ) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        private function popupMenu(parent:UIComponent, menuDataList:Array, handler:Function):void {
+            var menu:Menu = Menu.createMenu(parent, menuDataList);
+            menu.addEventListener("itemClick", handler);
+            menu.addEventListener("itemRollOver", rollOverMenuItemEvent);
+            
+            var point:Point = parent.localToGlobal(new Point(0, 0));
+            menu.show(point.x + parent.width, point.y);
+        }
+        
+        
+        private function clickPopupCharacterListHandler(event:MenuEvent):void {
+            var params:Object = event.item.params;
+            if( params == null ) {
+                return;
+            }
+            
+            if( event.item.isResource ) {
+                changeResourceWindow(params);
+                return;
+            }
+            
+            var character:Character = event.item.character;
+            if( character == null ) {
+                return;
+            }
+            
+            changeCharacterCounter(character, params);
+        }
+        
+        
+        private function rollOverMenuItemEvent(event:MenuEvent):void {
+            var character:Character = event.item.pickupCharacter;
+            if( character == null ) {
+                return;
+            }
+            
+            character.pickup();
+            character.pickupOnInitiative();
+        }
+        
+        
+        static public function get initiativeCounterName():String {
+            return "#INI";
+        }
+        
+        private function changeCharacterCounter(character:Character, params:Object):void {
+            var counterName:String = params.counterName;
+            
+            if( counterName == initiativeCounterName ) {
+                changeCharacterCounterForInitiative(character, params);
+                return;
+            }
+            
+            changeCharacterCounterCommon(character, params, counterName);
+            
+        }
+        
+        private function changeCharacterCounterForInitiative(character:Character, params:Object):void {
+            var modifyValue:String = params.modifyValue;
+            var operator:String = params.operator;
+            var messageFormat:String = params.messageFormat;
+            
+            var initiative:Number = character.getInitiative();
+            var initiativeInt:int = Utils.getInitiativeInt( initiative );
+            var initiativeModify:int = Utils.getInitiativeModify( initiative );
+            var before:String = "" + initiativeInt;
+            
+            var modifyResult:Object = getModifiedValue(initiativeInt, modifyValue, operator);
+            initiativeInt = modifyResult.value;
+            initiative = Utils.getInitiative(initiativeInt, initiativeModify);
+            
+            character.setInitiative(initiative);
+            
+            var counterName:String = Language.s.initiativeValue;
+            var message:String = getExecuteResultMessage(messageFormat, character.getName(), counterName, 
+                                                         before, modifyResult)
+            sendCharacterChange(character, message);
+        }
+        
+        
+        private function changeCharacterCounterCommon(character:Character, params:Object, counterName:String):void {
+            var modifyValue:String = params.modifyValue;
+            var operator:String = params.operator;
+            var messageFormat:String = params.messageFormat;
+            
+            var trueCounterName:String = "";
+            if( counterName == initiativeCounterName ) {
+                trueCounterName = counterName;
+            } else {
+                trueCounterName = InitiativeWindow.getInstance().getTrueCounterName(counterName);
+            }
+            
+            if( trueCounterName == "" ) {
+                var errorMessage:String = Language.text("counterRemoconCounterNameWarning", counterName);
+                this.title = errorMessage;
+                Log.printSystemLogPublic(errorMessage);
+                return;
+            }
+            Log.logging("no error.");
+            
+            var value:int = character.getCounter(trueCounterName);
+            var before:String = "" + value;
+            
+            var modifyResult:Object = getModifiedValue(value, modifyValue, operator);
+            modifyResult.value = character.setCounter(trueCounterName, modifyResult.value);
+            
+            var message:String = getExecuteResultMessage(messageFormat, character.getName(),
+                                                         counterName, before, modifyResult);
+                                                         
+            sendCharacterChange(character, message);
+        }
+        
+        
+        private function changeResourceWindow(params:Object):void {
+            
+            var counterName:String = params.counterName;
+            var modifyValue:String = params.modifyValue;
+            var operator:String = params.operator;
+            var messageFormat:String = params.messageFormat;
+            
+            var target:Object = ResourceWindow.getInstance().getResourceItem(counterName);
+            if( target == null) { 
+                return;
+            }
+            
+            var value:int = target.value;
+            var before:String = "" + value;
+            
+            var modifyResult:Object = getModifiedValue(value, modifyValue, operator);
+            target.value = modifyResult.value;
+            
+            var message:String = getExecuteResultMessage(messageFormat, Language.s.resourceWindowTitle,
+                                                         counterName, before, modifyResult);
+            
+            var resultFunction:Function = function(event:Event):void { sendMessage(message); } 
+            
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.getSender().changeResource(target, resultFunction);
+        }
+        
+        
+        private function getExecuteResultMessage(messageFormat:String, characterName:String, counterName:String, 
+                                                       before:String, modifyResult:Object):String {
+
+            var chatMessage:String = getExecuteResultChatMessage(messageFormat, characterName,
+                                                                 counterName, before, modifyResult);
+            
+            var diceRollInfo:Object = {
+                "randResults": modifyResult.randResults,
+                "uniqueId": DodontoF_Main.getInstance().getStrictlyUniqueId(),
+                "chatMessage": chatMessage };
+            
+            var command:CutInCommandRollVisualDice = new CutInCommandRollVisualDice();
+            
+            return command.getMark() + Utils.getJsonString(diceRollInfo);
+        }
+        
+        static public function getExecuteResultChatMessage(messageFormat:String, characterName:String, counterName:String, 
+                                                       before:String, modifyResult:Object):String {
+            var modify:String = "" + modifyResult.text;
+            var modifyAbs:String = "" + Math.abs( parseInt(modify) );
+            var after:String = modifyResult.value;
+            
+            if( modifyResult.text == "?" ) {
+                modify = "?";
+                modifyAbs = "?";
+                after = "?";
+            }
+            
+            var result:String = StringUtil.substitute(Language.s.counterRemoconExecuteResultFormat, counterName, before, after);
+            
+            var chatMessage:String = StringUtil.substitute(messageFormat, 
+                                         characterName,   //{0} 相手
+                                         counterName,     //{1} カウンター名
+                                         modify,          //{2} 修正値
+                                         modifyAbs,       //{3} 修正値の絶対値(＋−無し）
+                                         result);         //{4} 変更結果
+            return chatMessage;
+        }
+        
+        private function sendCharacterChange(character:Character, message:String):void {
+            DodontoF_Main.getInstance().getGuiInputSender().getSender()
+            .changeCharacter( character.getJsonData(),
+                              function(event:Event):void {
+                                  sendMessage(message);
+                              } );
+        }
+        
+        public function getModifiedValue(value:int, modifyValueString:String, operator:String):Object {
+            
+            if( isSelectValue(modifyValueString) ) {
+                return {value: "?", 
+                        text: "?" };
+            }
+            
+            var valueInfo:Object = getValueInfoFromDiceText(modifyValueString);
+            var modifyValue:int = valueInfo.value;
+            Log.logging("modifyValue", modifyValue);
+            Log.logging("valueInfo.text", valueInfo.text);
+            
+            var text:String = "";
+            if( operator == "plus" ) {
+                value = (value + modifyValue);
+                text = "+" + modifyValue + valueInfo.text;
+            } else if( operator == "minus" ) {
+                value = (value - modifyValue);
+                text = "-" + modifyValue + valueInfo.text;
+            } else if( operator == "equal" ) {
+                value = modifyValue;
+                text = "" + modifyValue + valueInfo.text;
+            } else {
+                throw "operator:" + operator + "is invalid!";
+            }
+            
+            var result:Object = {
+                value: value,
+                text: text,
+                randResults: valueInfo.randResults };
+            
+            Log.logging("getModifiedValue result", result);
+            return result;
+        }
+        
+        private function getValueInfoFromDiceText(diceText:String):Object {
+            var params:Object = getDiceParamsFromDiceText(diceText);
+            Log.logging("params", params);
+            
+            if( params.value != null ) {
+                return {text:"",
+                        value: params.value};
+            }
+            
+            var text:String = "(" + diceText + "->";
+            var value:int = 0;
+            var randResults:Array = new Array();
+            
+            for(var i:int = 0 ; i < params.diceCount ; i++) {
+                if( i != 0 ) {
+                    text += ",";
+                }
+                
+                var randValue:int = getRandValue(params, randResults);
+                text += randValue;
+                value += randValue;
+            }
+            
+            text += getModifyString(params.modify) + ")";
+            value += params.modify;
+            
+            var valueInfo:Object = {
+                text: text,
+                value: value,
+                randResults: randResults
+            };
+            
+            return valueInfo;
+        }
+        
+        
+        private function getDiceParamsFromDiceText(text:String):Object {
+            Log.logging("getValueFromDiceText text", text);
+            
+            var diceReg:RegExp = /^(\d*)D(\d+)(S|N)?((\+|\-)\d+)?$/i;
+            var diceMatchResult:Object = diceReg.exec(text);
+            
+            if( diceMatchResult == null ) {
+                Log.logging("dice regexp is NOT match, so this is value text.");
+                return {value: parseInt(text)};
+            }
+            
+            var diceCount:int = getIntFromString(diceMatchResult[1], 1);
+            var diceType:int = getIntFromString(diceMatchResult[2]);
+            var isSwap:Boolean = isSwapText(diceMatchResult[3]);
+            var modify:int = getIntFromString(diceMatchResult[4]);
+            
+            var params:Object = {diceCount:diceCount,
+                                 diceType: diceType,
+                                 isSwap: isSwap,
+                                 modify: modify};
+            Log.logging("getDiceParamsFromDiceText result params", params);
+            return params
+        }
+        
+        private function getIntFromString(text:String, defaultValue:int = 0):int {
+            if( text == null || text == "") {
+                return defaultValue;
+            }
+            
+            var value:int = parseInt(text);
+            if( isNaN(value) ) {
+                value = defaultValue;
+            }
+            return value;
+        }
+        
+        private function isSwapText(text:String):Boolean {
+            if( text == null ) {
+                return false;
+            }
+            
+            return (text.toUpperCase() == "S");
+        }
+        
+        private function getModifyString(modify:int):String { 
+            if( modify > 0 ) {
+                return "+" + modify;
+            } else if( modify < 0 ) {
+                return "" + modify;
+            }
+            
+            return "";
+        }
+        
+        
+        private function getRandValue(params:Object, randResults:Array):int {
+            
+            if( params.diceType == 66 ) {
+                return getRandValueD66(params, randResults);
+            }
+            
+            var value:int = Dice.getRandomNumber(params.diceType);
+            randResults.push( [value, params.diceType] );
+            return value;
+        }
+        
+        private function getRandValueD66(params:Object, randResults:Array):int {
+            
+            var d66_1:int = Dice.getRandomNumber(6);
+            var d66_2:int = Dice.getRandomNumber(6);
+            randResults.push( [d66_1, 6] );
+            randResults.push( [d66_2, 6] );
+            
+            var value66:int = getSwapD66(d66_1, d66_2, params.isSwap);
+            
+            return value66;
+        }
+        
+        private function getSwapD66(d66_1:int, d66_2:int, isSwap:Boolean):int { 
+            var value:int = d66_1 * 10 + d66_2;
+            
+            if( isSwap ) {
+                if( d66_2 < d66_1 ) {
+                    value = d66_2 * 10 + d66_1;
+                }
+            }
+            
+            return value;
+        }
+        
+        private function sendMessage(message:String):void {
+            var window:ChatWindow = ChatWindow.getInstance();
+            var isCheckDiceRoll:Boolean = false;
+            window.sendChatMessage(window.publicChatChannel, message, isCheckDiceRoll);
+        }
+        
+        
+        public function changeButtonInfo(params:Object, index:int):void {
+            if( index == -1 ) {
+                buttonInfos.push(params);
+            } else {
+                editButtonInfo (params, index);
+            }
+            
+            initButtons();
+        }
+        
+        
+        public function editButtonInfo(params:Object, index:int):void {
+            var buttonInfo:Object = buttonInfos[index];
+            if( buttonInfo == null ) {
+                return;
+            }
+            
+            for(var key:String in buttonInfo) {
+                buttonInfo[key] = params[key];
+            }
+        }
+        
+        private function saveButtons():void {
+            saveLoadLocalFile.save(buttonInfos, "CounterRemocon");
+        }
+        
+        private function loadButtons():void {
+            saveLoadLocalFile.load();
+        }
+        
+        public function loadSaveData(saveData:Object):void {
+            buttonInfos = saveData as Array;
+            initButtons();
+        }
+       
+    ]]>
+    
+  </mx:Script>
+  
+</torgtaitai:ResizableWindow>

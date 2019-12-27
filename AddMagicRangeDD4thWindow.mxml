@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="500"
+   height="315"
+   close="PopUpManager.removePopUp(this)"
+   >
+  
+  <mx:Form>
+	<mx:FormItem label="{Language.s.magicRangeName}:">
+	  <mx:TextInput id="magicRangeName" text="" />
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.magicRangeType}:">
+      <mx:ComboBox id="magicRangeType" width="100%" editable="false" dataProvider="{magicRangeTypeDataProvider}">
+      </mx:ComboBox>
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.magicRangeRadius}:">
+	  <mx:NumericStepper id="magicRangeRadius" minimum="1" maximum="100" value="1" stepSize="1" />
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.magicRangeColor}:">
+    <mx:ColorPicker id="magicRangeColorPicker" showTextField="true" selectedColor="0x000000" />
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.magicRangeTimeRange}:">
+	  <mx:NumericStepper id="magicRangeTimeRange" minimum="1" maximum="99" value="1" />
+	</mx:FormItem>
+	<mx:FormItem label="{Language.s.initiativeWindowColumnTitleInfo}:">
+	  <mx:TextInput id="magicRangeInfo" text="" />
+	</mx:FormItem>
+    <mx:CheckBox id="isShowOnInitiativeWindow" label="{Language.s.isShowOnInitiativeWindow}" selected="true" />
+  </mx:Form>
+  
+  <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button id="executeButton" label="{Language.s.addButton}" click="this.execute()" />
+    <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+  </mx:HBox>
+
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.events.FlexEvent;
+    
+    /**
+     * D&D4版の魔法範囲の追加画面
+     */
+    
+    private var characterPositionX:int;
+    private var characterPositionY:int;
+    
+    [Bindable]
+    private var magicRangeTypeDataProvider:Array = [];
+    
+    /**
+     * 魔法範囲の初期配置座標を指定
+     */
+    public function setCharacterPosition(x:int = 1, y:int = 1):void {
+        characterPositionX = x;
+        characterPositionY = y;
+    }
+    
+    /**
+     * Windowの初期化処理
+     */
+    override protected function setup():void {
+        title = Language.s.addMagicRangeDD4thWindowTitle;
+        initRangeType();
+    }
+    
+    protected function initRangeType():void {
+        magicRangeTypeDataProvider = [MagicRangeDD4th.closeBurst, MagicRangeDD4th.blast];
+    }
+    
+    /**
+     * 魔法範囲の追加処理
+     */
+    public function execute():void {
+        try{
+            var roundTimer:RoundTimer = DodontoF_Main.getInstance().getRoundTimer();
+            
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.addMagicRangeDD4th(magicRangeName.text,
+                                              getFeets(),
+                                              magicRangeType.selectedItem.data,
+                                              ("0x" + magicRangeColorPicker.selectedColor.toString(16)),
+                                              magicRangeTimeRange.value,
+                                              roundTimer.getCurrentRound(),
+                                              roundTimer.getCurrentInitiative(),
+                                              magicRangeInfo.text,
+                                              characterPositionX,
+                                              characterPositionY,
+                                              isHide());
+            
+            PopUpManager.removePopUp(this);
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    /**
+     * D&D4版のルールに従って、範囲のマス数をフィート表示に変換。
+     */
+    protected function getFeets():int {
+        var radius:int = magicRangeRadius.value;
+        var feets:int = radius * 5;
+        return feets;
+    }
+    
+    /**
+     * 画面のチェックは「イニシアティブ表に表示させる」もので、
+     * 魔法範囲が持つ属性は「非表示にさせるか」というもの。
+     * 真偽が逆になるのがややこしいのでここで変換して処理します。
+     */
+    protected function isHide():Boolean {
+        return ( ! isShowOnInitiativeWindow.selected )
+    }
+    
+    
+    ]]>
+  </mx:Script>
+  
+</torgtaitai:CommonPopupWindow>

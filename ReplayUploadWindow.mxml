@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="700"
+   height="400"
+   title="{Language.s.replayUploadWindowTitle}" 
+   showCloseButton="true"
+   >
+  
+  <mx:Text text="{Language.s.replayUploadWindowWelcomeMessage1}" />
+<!--
+  <mx:Text text="{Language.s.replayUploadWindowWelcomeMessage2}" />
+  <mx:Text text="{Language.s.replayUploadWindowWelcomeMessage3}" />
+-->
+  
+  <mx:DataGrid id="replayDataListGrid"
+               width="100%"
+               height="100%"
+               dataProvider="{replayDataList}"
+               editable="false"
+		       draggableColumns="true"
+               click="selectReplayDataList()"
+               >
+	<mx:columns>
+	  <mx:DataGridColumn headerText="{Language.s.replayUploadTitle}"
+                         dataField="title"
+                         textAlign="center"
+                         width="50"/>
+	  <mx:DataGridColumn headerText="URL"
+                         dataField="url"
+                         textAlign="center"
+                         width="50"/>
+	</mx:columns>
+  </mx:DataGrid>
+      
+  <mx:HBox height="25" width="100%" verticalAlign="middle">
+    <mx:Button label="{Language.s.replayUploadPlayButton}" click="playReplayData()"  fontWeight="normal" />
+    <mx:Button label="{Language.s.deleteButton}"  click="removeReplayData()" fontWeight="normal" />
+    <mx:Label id="selectedTitle" text="{Language.s.replayUploadTitle}" width="150" selectable="true" />
+  </mx:HBox>
+  <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Label id="selectedUrl" text="{Language.s.replayUploadPlayUrl}" width="100%" selectable="true"
+              toolTip="{Language.s.replayUploadPlayUrlInfo}"
+ />
+  </mx:HBox>
+  
+  <mx:Spacer width="100%" height="10" />
+  
+  <mx:Label text="{Language.s.replayUploadMessage}" />
+  <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button id="selectButton" label="{Language.s.selectUploadReplayData}" click="selectReplayData()" />
+    <mx:Label text="{Language.s.replayUploadTitle}:" />
+	<mx:TextInput id="replayDataTitle" width="100%" />
+    <mx:Button id="uploadButton" enabled="false" label="{Language.s.uploadReplayData}" click="uploadReplayData()" />
+  </mx:HBox>
+  
+  <mx:HBox  height="25" width="100%" horizontalAlign="center" verticalAlign="middle" >
+    <mx:Label text="{Language.s.uploadReplayDataResult}" />
+    <mx:Label id="result" width="100%" text="" fontWeight="bold" />
+    <mx:Button label="{Language.s.closeButton}" click="PopUpManager.removePopUp(this)" />
+  </mx:HBox>
+  
+  
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.managers.PopUpManager;
+    import mx.controls.Label;
+    import mx.controls.Alert;
+    import mx.collections.ArrayCollection;
+    import mx.events.CloseEvent;
+    
+    [Bindable]
+    private var replayDataList:ArrayCollection = new ArrayCollection();
+    
+    private var guiInputSender:GuiInputSender;
+    
+    override protected function setup():void {
+        guiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+        requestReplayDataList();
+    }
+    
+    public function selectReplayDataList():void {
+        var index:int = replayDataListGrid.selectedIndex;
+        
+        var replayData:Object = replayDataList[index];
+        if( replayData == null ) {
+            selectedTitle.text = "";
+            selectedUrl.text = "";
+            return;
+        }
+        
+        selectedTitle.text = replayData.title;
+        selectedUrl.text = replayData.url;
+    }
+    
+    public function removeReplayData():void {
+        var index:int = replayDataListGrid.selectedIndex;
+        
+        var replayData:Object = replayDataList[index];
+        if( replayData == null ) {
+            return;
+        }
+        
+        var targetReplayData:Object = {
+            "title": replayData.title,
+            "url": replayData.url
+        };
+        Log.loggingTuning("ReplayUploadWindow.removeReplayData replayData", replayData);
+        
+        var message:String = Language.text("deleteReplayDataQuestion", replayData.title);
+        var result:Alert = Alert.show(message, Language.s.deleteUploadedReplayDataQuestion, 
+                                      Alert.OK | Alert.CANCEL, null, 
+                                      function(e : CloseEvent) : void { if (e.detail == Alert.OK) {
+                                              guiInputSender.removeReplayData(targetReplayData,
+                                                                              requestReplayDataListResult);
+                                          }});
+    }
+    
+    public function playReplayData():void {
+        var index:int = replayDataListGrid.selectedIndex;
+        
+        var replayData:Object = replayDataList[index];
+        if( replayData == null ) {
+            return;
+        }
+        
+        var request:URLRequest = new URLRequest(replayData.url);
+        navigateToURL(request);
+    }
+    
+    private var fileReferenceForUpload:FileReference = null;
+    
+    public function selectReplayData():void {
+        
+        if( fileReferenceForUpload == null ) {
+            fileReferenceForUpload  = new FileReference();
+            fileReferenceForUpload.addEventListener(Event.SELECT, fileSelectHandler);
+        }
+        
+        var filters:Array = new Array();
+        filters.push(new FileFilter(Language.s.replayDataFileFormat,"*.rec"));
+        
+        fileReferenceForUpload.browse(filters);
+    }
+    
+    private function fileSelectHandler(event:Event):void {
+        uploadButton.enabled = true;
+    }
+    
+    private function uploadReplayData():void {
+        if( replayDataTitle.text == "" ) {
+            Alert.show(Language.s.pleaseInputReplayDataTitle)
+            return;
+        }
+        
+        selectButton.enabled = false;
+        uploadButton.enabled = false;
+        result.text = Language.s.uploading;
+        
+        var params:Object = {
+            'replayDataName' : replayDataTitle.text,
+            'ownUrl' : Utils.getOwnUrl()
+        };
+        
+        var sender:SharedDataSender = guiInputSender.getSender();
+        //sender.sendFileUpload(fileReferenceForUpload, "uploadReplayData", params);
+        sender.sendFileBytesUpload(fileReferenceForUpload, "uploadReplayData", params, uploadReplayDataResult);
+        
+        //fileReferenceForUpload.addEventListener(DataEvent.UPLOAD_COMPLETE_DATA, uploadReplayDataResult);
+    }
+    
+    //public function uploadReplayDataResult(dataEvent:DataEvent):void {
+    public function uploadReplayDataResult(dataEvent:Object = null):void {
+        Log.loggingTuning("=>uploadReplayDataResult(event:Event) Begin");
+        try {
+            selectButton.enabled = true;
+            
+            //var jsonData:Object = SharedDataReceiver.getJsonDataFromDataEvent(dataEvent);
+            var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(dataEvent);
+            Log.loggingTuning("jsonData", jsonData);
+            
+            var resultText:String = jsonData.resultText;
+            result.text = Language.getKeywordText(resultText);
+            
+            if( result.text == "OK" ) {
+                replayDataTitle.text = "";
+                replayDataList = new ArrayCollection( jsonData.replayDataList );
+            }
+        } catch(e:Error) {
+            Log.loggingError("exception : " + e);
+        }
+        Log.loggingTuning("=>uploadReplayDataResult(event:Event) End");
+    }
+    
+    
+    private function requestReplayDataList():void {
+        var sender:SharedDataSender = guiInputSender.getSender();
+        Log.loggingTuning("requestReplayDataList calling...");
+        sender.requestReplayDataList( this.requestReplayDataListResult );
+        Log.loggingTuning("requestReplayDataList called.");
+    }
+    
+    public function requestReplayDataListResult(obj:Object):void {
+        Log.loggingTuning("=>requestReplayDataListResult(obj) Begin");
+        
+        Log.loggingTuning("obj", obj);
+        try {
+            var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(obj);
+            Log.loggingTuning("jsonData", jsonData);
+            Log.loggingTuning("jsonData.replayDataList", jsonData.replayDataList);
+            replayDataList = new ArrayCollection( jsonData.replayDataList );
+            
+        } catch(e:Error) {
+            Log.loggingError("exception : " + e);
+        }
+        
+        Log.loggingTuning("=>requestReplayDataListResult(event:Event) End");
+    }
+        
+    
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="650"
+   height="470"
+   verticalAlign="middle"
+   horizontalAlign="center"
+   title="{Language.s.webCameraCaptureWindowTitle}" 
+   showCloseButton="true"
+   close="closeWindow()"
+>
+  
+  <mx:Label text="{Language.s.webCameraCaptureInfos_1}" />
+  <mx:Label text="{Language.s.webCameraCaptureInfos_2}" />
+  <mx:Panel id="previewPanle" x="33" y="40" width="340" height="280" layout="absolute">
+    <mx:VideoDisplay y="0" x="0" width="320" height="240" id="display"/>
+    <mx:Image x="0" y="0" id="imgPreview" />
+  </mx:Panel>
+  
+  <torgtaitai:ImageUploadSetInfo id="imageUploadSetInfo"
+                                 width="100%" horizontalAlign="center" verticalAlign="middle" />
+  
+  <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button label="{Language.s.capture}" id="btnShoot" click="clickShoot()"/>
+    <mx:Button label="{Language.s.uploadCaptureImage}" id="btnSave" enabled="false" click="clickSave()"/>
+    <mx:Button label="{Language.s.closeButton}" click="closeWindow()" />
+    <mx:Spacer width="50"/>
+  </mx:HBox>
+  
+  <mx:Script>
+        <![CDATA[
+
+//本ソースは以下のサイトを参照に作成いたしました。
+//この場を借りてお礼申し上げます。
+//http://blog.asial.co.jp/343
+
+    import mx.managers.PopUpManager;
+    import mx.controls.Image;
+    import mx.controls.Alert;
+    import flash.media.Camera;
+    import PNGEncoder;
+
+    private var camera:Camera;
+    private var captureBitMap:Bitmap;
+    
+    private var closeEvent:Function = null;
+        
+    public function setCloseEvent(function_:Function):void {
+        closeEvent = function_;
+    }
+        
+    public function closeWindow():void {
+        if( closeEvent != null ) {
+            closeEvent.call();
+        }
+        
+        stopCamera();
+        PopUpManager.removePopUp(this);
+    }
+    
+    public function stopCamera():void {
+        display.attachCamera(null);
+    }
+    
+    
+    override protected function setup():void {
+        initCamera();
+        imageUploadSetInfo.imageTypeChanged();
+        imageUploadSetInfo.setUploadMode();
+    }
+        
+    // カメラの初期化
+    public function initCamera():void {
+        camera = Camera.getCamera();
+        if (camera) {
+            camera.setMode(640, 480, 10, true);
+            display.attachCamera(camera);
+            previewPanle.status = Language.s.capturing;
+        } else {
+            Alert.show(Language.s.cameraNotFound);
+        }
+    }
+        
+    // 撮影ボタン
+    public function clickShoot():void {
+        if (imgPreview.source) {
+            previewPanle.status = Language.s.capturing;
+            btnShoot.label = Language.s.capture;
+            btnSave.enabled = false;
+            imgPreview.source = null;
+        } else {
+            previewPanle.status = Language.s.uploadCapturedImageQuestion;
+            btnShoot.label = Language.s.cancel;
+            btnSave.enabled = true;
+                
+            // 表示されている画像を取得して動画の上に貼り付ける。。
+            captureBitMap = new Bitmap();
+            var bitmapData:BitmapData = new BitmapData(display.width, display.height);
+            captureBitMap.bitmapData = bitmapData;
+            bitmapData.draw(display);
+            imgPreview.source = captureBitMap;
+        }
+    }
+    
+    private function getSmallImageData(imageBitmap:Bitmap, imageData:ByteArray):ByteArray {
+        var sizeInfo:Object = {
+                "width"  : captureBitMap.width,
+                "height" : captureBitMap.height
+        };
+        var rates:Object = ImageUploadWindow.getSmallImageRatesFromSizeInfo(sizeInfo);
+        
+        var smallData:BitmapData = new BitmapData( captureBitMap.width * rates.widthRate, 
+                                                   captureBitMap.height * rates.heightRate );
+        
+        var matrix:Matrix = new Matrix();
+        matrix.scale(rates.widthRate, rates.heightRate);
+        
+        smallData.draw(imageBitmap, matrix);
+        
+        var pngEncoder:PNGEncoder = new PNGEncoder();
+        var bytes:ByteArray = pngEncoder.encode(smallData);
+        
+        return bytes;
+
+    }
+        
+    // 保存ボタン
+    public function clickSave():void {
+        var imageFileName:String = "tmp.png";
+        
+        var pngEncoder:PNGEncoder = new PNGEncoder();
+        var imageData:ByteArray = pngEncoder.encode(captureBitMap.bitmapData);
+        var smallImageData:ByteArray = getSmallImageData(captureBitMap, imageData);
+        var tagInfo:Object = imageUploadSetInfo.getTagInfo();
+        
+        ImageUploadWindow.uploadImageFileOne(imageFileName, imageData, smallImageData, tagInfo,
+                                             uploadSuccessResult, uploadErrorResult);
+        btnSave.enabled = false;
+        previewPanle.status = Language.s.captureImageUploading;
+    }
+    
+    public function uploadSuccessResult(event:Event):void {
+        btnShoot.label = Language.s.capture;
+        imgPreview.source = null;
+        captureBitMap = null;
+        
+        var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(event);
+        Log.loggingTuning("loader end");
+        Log.loggingTuning("jsonData.resultText", jsonData.resultText);
+        previewPanle.status = Language.s.captureImageUploadResult + jsonData.resultText;
+    }
+        
+    public function uploadErrorResult(event:Event):void {
+        previewPanle.status = Language.s.captureImageUploadResult + Language.s.captureImageUploadResultFailed;
+    }
+    
+        ]]>
+    </mx:Script>
+</torgtaitai:CommonPopupWindow>

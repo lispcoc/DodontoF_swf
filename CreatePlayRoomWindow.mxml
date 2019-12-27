@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="500"
+   height="220"
+   title="{Language.s.createNewPlayRoom}"
+   showCloseButton="true"
+   >
+  
+  <mx:Box width="100%" height="100%"
+          verticalGap="1" horizontalGap="1" >
+    
+	<mx:Label text="{Language.s.createNewPlayRoomInfoText}" />
+      
+    <mx:HBox id="createPasswordBox" enabled="false" visible="false"
+             height="0" width="100%" horizontalAlign="center" verticalAlign="middle" >
+      <mx:HRule width="50" strokeWidth="1" shadowColor="black" strokeColor="black"/>
+	  <mx:Label text="{Language.s.createPassword}:" />
+      <mx:TextInput id="createPassword" width="100%" text="" />
+      <mx:HRule width="50" strokeWidth="1" shadowColor="black" strokeColor="black"/>
+    </mx:HBox>
+      
+    <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle" >
+	  <mx:Label text="{Language.s.playRoomName}:" />
+      <mx:TextInput id="playRoomName" width="100%" text="" />
+    </mx:HBox>
+    <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle" >
+	  <mx:Label text="{Language.s.loginPasswordWithTips}:" />
+      <mx:TextInput id="playRoomPassword" width="100%" text=""
+                    displayAsPassword="true"
+                    />
+    </mx:HBox>
+    
+    <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle" >
+	  <mx:Label text="{Language.s.gameTypeWithTips}:" />
+      <torgtaitai:SuggestComboBox id="gameType" width="100%" rowCount="10"
+                                  labelField="name"
+                                  />
+    </mx:HBox>
+    
+    <mx:Spacer width="100%" height="5" />
+    
+    <mx:Button id="extendButton" label="{Language.s.extendButton}" click="extend()" />
+    
+    <mx:Box id="extendBox" height="0" width="100%" visible="false" >
+      
+      <mx:HBox id="canUseExternalImageBox" height="25" width="100%"
+               toolTip="{Language.s.useExternalImageTips}"
+               >
+        <mx:Label text="{Language.s.canUseExternalImageConfig}:" />
+	    <mx:RadioButtonGroup id="canUseExternalImageRadioGroup" />
+	    <mx:RadioButton groupName="canUseExternalImageRadioGroup"
+                        id="canUseExternalImage" 
+                        value="canUseExternalImage" 
+                        label="{Language.s.canUseExternalImage}"
+                        enabled="{Config.canUseExternalImageModeOn}"
+                        />
+	    <mx:RadioButton groupName="canUseExternalImageRadioGroup"
+                        selected="true"
+                        id="canNotUseExternalImage"
+                        value="canNotUseExternalImage"
+                        label="{Language.s.canNotUseExternalImage}"
+                        enabled="{Config.canUseExternalImageModeOn}"
+                        />
+      </mx:HBox>
+      
+      <mx:HBox id="visiterBox" height="25" width="100%"
+               toolTip="{Language.s.canVisitTips}"
+               >
+        <mx:Label text="{Language.s.canVisitConfig}:" />
+	    <mx:RadioButtonGroup id="canVisitRadioGroup" />
+	    <mx:RadioButton groupName="canVisitRadioGroup"
+                        id="canVisit" 
+                        value="canVisit" 
+                        label="{Language.s.canVisitSetting}"
+                        click="changeVisitMode(true)"
+                        />
+	    <mx:RadioButton groupName="canVisitRadioGroup"
+                        selected="true"
+                        id="canNotVisit"
+                        value="canNotVisit"
+                        label="{Language.s.canNotVisitSetting}"
+                        click="changeVisitMode(false)"
+                        />
+      </mx:HBox>
+      
+      <mx:Box width="100%">
+        <mx:Label text="{Language.s.chatTabNameList}:" />
+        <mx:Label text="{Language.s.chatTabNameListInfo}:" />
+        <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle" >
+          <mx:Label id="publicChannelLabel" text="" />
+          <mx:TextInput id="chatChannelNamesText" width="100%" text="{Language.s.smallTalkTabName}" />
+          <mx:Label id="visiterChannlelLabel" width="0" text="{Language.s.visitorTabName}" />
+        </mx:HBox>
+      </mx:Box>
+      
+      <mx:Box id="viewStateInfosBox"
+              width="100%" height="100%" >
+        <mx:Label text="{Language.s.viewStateInfo}" />
+      </mx:Box>
+      
+    </mx:Box>
+    
+    <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle">
+      <mx:Button id="executeButton" label="{Language.s.createButton}" click="execute()" />
+      <mx:Button label="{Language.s.cancelButton}" click="closeAction()" />
+    </mx:HBox>
+    
+  </mx:Box>
+  
+  <mx:Script>
+    <![CDATA[
+             
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.controls.Alert;
+    import mx.controls.CheckBox;
+    
+    protected var resultFunction:Function;
+    protected var canselFunction:Function;
+    protected var playRoomIndex:int;
+    
+    public function initParams(playRoomIndex_:int, isNeedCreatePassword:Boolean, 
+                               resultFunction_:Function = null, canselFunction_:Function = null):void {
+        playRoomIndex = playRoomIndex_;
+        resultFunction = resultFunction_;
+        canselFunction = canselFunction_;
+        playRoomName.text = Language.s.defaultPlayRoomName;
+        playRoomName.toolTip = Language.s.playRoomNameTips;
+        
+        setCreatePasswordMod(isNeedCreatePassword);
+    }
+    
+    private function setCreatePasswordMod(isNeedCreatePassword:Boolean):void {
+        if( ! isNeedCreatePassword ) {
+            return;
+        }
+        
+        createPasswordBox.enabled = true;
+        createPasswordBox.visible = true;
+        createPasswordBox.height = 35;
+        this.height += createPasswordBox.height;
+    }
+    
+    override protected function setup():void {
+        initWindowSizeByFont18(900, 250);
+        
+        Log.logging("CreatePlayRoomWindow.setup begin");
+        try {
+            init();
+            initViewStateInfos();
+            initGameType();
+        } catch(error:Error) {
+            this.status = "setup error" + error.message;
+        }
+        Log.logging("CreatePlayRoomWindow.setup end");
+    }
+    
+    override protected function teardown():void {
+        if( canselFunction != null ) {
+            canselFunction();
+        }
+    }
+    
+    protected function init():void {
+        publicChannelLabel.text = DodontoF_Main.getInstance().publicChatChannelName;
+    }
+    
+    protected function initGameType():void {
+        Log.logging("initGameType begin");
+        
+        var diceBotInfos:Array = DodontoF_Main.getInstance().getDiceBotInfos();
+        Utils.removeBaseDiceBot(diceBotInfos);
+        
+        Utils.setDiceBotDataProvider( gameType, diceBotInfos );
+        
+        if( ChatWindow.getInstance() != null ) {
+            var gameTypeText:String = ChatWindow.getInstance().getGameType();
+            Utils.setGameTypeToComboBox(gameTypeText, gameType);
+        }
+        
+        Log.logging("initGameType end");
+    }
+    
+    protected var menuInfos:Array = null;
+    
+    protected function initViewStateInfos():void {
+        menuInfos = DodontoF_Main.getInstance().getDodontoF().collectMainMenuInfos();
+        
+        for each(var info:Object in menuInfos) {
+                var checkBox:CheckBox = new CheckBox();
+                checkBox.label = info.label;
+                checkBox.selected = info.toggled;
+                viewStateInfosBox.addChild( checkBox );
+                info.checkBox = checkBox;
+            }
+    }
+    
+    
+    protected function getChatChannelNames():Array {
+        var parts:Array = chatChannelNamesText.text.split(/[\s　]+/);
+        
+        var chatChannelNames:Array = new Array();
+        chatChannelNames.push( DodontoF_Main.publicChatChannelName );
+        
+        for(var i:int = 0 ; i < parts.length ; i++) {
+            var name:String = parts[i];
+            if( name == "" ) {
+                continue;
+            }
+            
+            chatChannelNames.push(name);
+        }
+        
+        if( canVisit.selected ) {
+            chatChannelNames.push( Language.s.forVisitor );
+        }
+        
+        return chatChannelNames;
+    }
+    
+    protected function getViewStates():Object {
+        var result:Object = new Object();
+        
+        for each(var info:Object in menuInfos) {
+                var checkBox:CheckBox = info.checkBox;
+                result[ info.data ] = checkBox.selected;
+            }
+        
+        Log.logging("getViewStates result", result);
+        return result;
+    }
+
+    protected function getGameType():String {
+        var item:Object = gameType.selectedItem;
+        var itemClass:String = getQualifiedClassName(item);
+        
+        Log.logging("getGameType item", item);
+        Log.logging("getGameType itemClass", itemClass);
+        
+        var result:String = null;
+        
+        if( itemClass == "String" ) {
+            result = item as String;
+            Log.logging("getGameType item is String, so result", result);
+            return result;
+        }
+        
+        if( item == null ) {
+            return gameType.text;
+        }
+        
+        result = item.gameType;
+        
+        Log.logging("getGameType result", result);
+        return result;
+    }
+    
+    protected function execute():void {
+        Log.loggingTuning("=>createPlayRoom Begin");
+        executeButton.enabled = false;
+        
+        var chatChannelNames:Array = getChatChannelNames();
+        
+        try {
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.createPlayRoom(createPassword.text,
+                                          playRoomName.text,
+                                          playRoomPassword.text,
+                                          chatChannelNames,
+                                          canUseExternalImage.selected,
+                                          canVisit.selected,
+                                          getGameType(),
+                                          getViewStates(),
+                                          playRoomIndex,
+                                          executeResult);
+        } catch(error:Error) {
+            this.status = "execute error : " + error.message;
+        }
+        
+        Log.loggingTuning("=>createPlayRoom End");
+    }
+    
+    public function executeResult(event:Event):void {
+        try{
+            var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(event);
+            var resultText:String = jsonData.resultText;
+            
+            if( resultText != "OK" ) {
+                printError(resultText);
+                executeButton.enabled = true;
+                return;
+            }
+            
+            DodontoF_Main.getInstance().setPlayRoomPassword(playRoomPassword.text);
+            
+            if( resultFunction != null ) {
+                if( playRoomIndex == -1 ) {
+                    resultFunction(jsonData.playRoomIndex);
+                } else {
+                    resultFunction(playRoomPassword.text);
+                }
+            }
+            
+            PopUpManager.removePopUp(this);
+            
+        } catch(error:Error) {
+            this.status = "executeResult error : " + error.message;
+        }
+    }
+    
+    private function printError(resultText:String):void {
+        resultText = Language.getKeywordText(resultText);
+        Alert.show(resultText);
+        this.status = "server error : "+ resultText;
+    }
+    
+    private var extendMode:Boolean = false;
+    
+    public function extend():void {
+        extendMode = ( ! extendMode);
+        
+        var extendHeight:int = 105
+            + visiterBox.height
+            + canUseExternalImageBox.height
+            + 90;//viewStateInfosBox.height;
+        
+        if( extendMode ) {
+            extendButton.label = Language.s.hideExtendButton;
+            extendBox.height = extendHeight;
+            this.height += extendHeight;
+            extendBox.visible = true;
+        } else {
+            extendButton.label = Language.s.extendButton;
+            extendBox.height = 0;
+            this.height -= extendHeight;
+            extendBox.visible = false;
+        }
+        
+        PopUpManager.centerPopUp(this);
+    }
+    
+    public function changeVisitMode(canVisitValue:Boolean):void {
+        if( canVisitValue ) {
+            visiterChannlelLabel.width = 50;
+        } else {
+            visiterChannlelLabel.width = 0;
+        }
+    }
+    
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

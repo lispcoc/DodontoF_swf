@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   alpha="1"
+   width="750"
+   height="600"
+   title="{Language.s.addStandingGraphics}" 
+   showCloseButton="true"
+   >
+
+  <torgtaitai:ImageSelecter id="imageSelecter" height="100%" width="100%" />
+  
+  <mx:Box height="150" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Label text="{Language.s.standingGraphicsTips}" />
+    <mx:Form>
+      <mx:FormItem label="{Language.s.standingGraphicsCharacterName}：">
+        <mx:TextInput id="characterName" width="100%" text="" />
+      </mx:FormItem>
+      <mx:FormItem label="{Language.s.standingGraphicStateColumn}：" >
+        <mx:TextInput id="state" width="100%" text="" />
+      </mx:FormItem>
+      <mx:FormItem label="{Language.s.standingGraphicPosition}：">
+        <mx:HBox width="100%" height="100%" >
+          <mx:HSlider id="leftIndexSlider"
+                      width="150"
+                      liveDragging="true"
+                      showTrackHighlight="false"
+                      maximum="12"
+                      minimum="1"
+                      value="1"
+                      snapInterval="1"
+                      />
+          <mx:ComboBox id="motionComboBox" dataProvider="{MotionEffect.motionInfos}"
+                       change="changeMotion()"
+                       toolTip="{Language.s.MotionEffectToolTip}" />
+        </mx:HBox>
+      </mx:FormItem>
+    </mx:Form>
+  </mx:Box>
+  
+  <mx:HBox height="25" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button id="executeButton" label="{Language.s.addButton}" click="execute()" />
+    <mx:Button label="{Language.s.closeButton}" click="PopUpManager.removePopUp(this)" />
+  </mx:HBox>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.controls.Image;
+    import mx.controls.Alert;
+    import mx.effects.Effect;
+    
+    
+    /** 
+     * 立ち絵追加画面
+     */
+    
+    private var previewImage:Image = new Image();
+    
+    
+    /**
+     * Windowの初期化処理
+     */
+    override protected function setup():void {
+        try {
+            imageSelecter.setImageInputLabel(Language.s.standingGraphicsImageFileName);
+            
+            imageSelecter.addPreview(previewImage, 300);
+            imageSelecter.visibleMirrored();
+            
+            if( imageSelecter.isBlankImage() ) {
+                imageSelecter.selectImageUrl( Config.defaultImageUrl );
+            }
+            printPreview();
+            
+            imageSelecter.setImageClickEventFunction(imageClickEvent);
+            imageSelecter.setImageLoadCompleteFunction(imageLoadComplete);
+            imageSelecter.setDefaultTags( [ImageTag.getStandingGraphicsTag(), ImageTag.getAllTag(), ImageTag.getCharacterTag()] );
+            imageSelecter.initImage( isLoadInitImageList() );
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    /** 
+     * 画面起動時に画像一覧を表示するかどうかの指定
+     */
+    protected function isLoadInitImageList():Boolean {
+        return true;
+    }
+    
+    /** 
+     * 画像一覧をクリックしたときにプレビューを更新する処理
+     */
+    public function imageClickEvent(imageName:String):void {
+        printPreview();
+    }
+    
+    
+    /** 
+     * 画像一覧で選択したプレビュー画像の読み込みが完了したら呼ばれる処理
+     */
+    public function imageLoadComplete():void {
+    }
+    
+    /** 
+     * プレビュー画像の更新処理
+     */
+    protected function printPreview():void {
+        var imageUrl:String = imageSelecter.getSelectedImageUrl();
+        Log.logging("imageUrl", imageUrl);
+        previewImage.source = imageUrl;
+    }
+    
+    
+    /** 
+     * 立ち絵の追加処理実行
+     */
+    protected function execute():void {
+        var params:Object = getEffectParams();
+        if( params == null ) {
+            return;
+        }
+    
+        StandingGraphicsManageWindow.standingGraphicInfos.push(params);
+    
+        var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+        guiInputSender.addEffect(params);
+    
+        state.text = "";
+    }
+    
+    
+    /** 
+     * 立ち絵用のデータ作製。
+     * 立ち絵はセーブデータでは「effect」という区分に当ります。
+     */
+    protected function getEffectParams():Object {
+        if( characterName.text == "" ) {
+            return null;
+        }
+        if( state.text == "" ) {
+            return null;
+        }
+        
+        var sourceText:String = imageSelecter.getSelectedImageUrl();
+        
+        var params:Object = {
+            "type" : StandingGraphics.getTypeStatic(),
+            "name": characterName.text,
+            "state": state.text,
+            "source": sourceText,
+            "mirrored": imageSelecter.isMirrored(),
+            "leftIndex": leftIndexSlider.value,
+            "motion": motionComboBox.selectedItem.data
+        };
+        addIdToPrams(params);
+    
+        return params;
+    }
+    
+    /** 
+     * 変更画面のではパラメータにIDを付与する。
+     * 追加画面なのでここでは処理無し。
+     */
+    protected function addIdToPrams(params:Object):void {
+    }
+    
+    
+    private var effect:Effect = null;
+    
+    private function changeMotion():void {
+        
+        if( effect != null ) {
+            effect.stop();
+            resetPreviewPosition();
+        }
+        
+        effect = new MotionEffect().
+            getMotionEffect(previewImage, 
+                            previewImage.height, previewImage.width,
+                            motionComboBox.selectedItem.data);
+        
+        if( effect == null ) {
+            resetPreviewPosition();
+            return;
+        }
+        
+        effect.play();
+    }
+    
+    private function resetPreviewPosition():void {
+        previewImage.scaleX = 1.0;
+        previewImage.scaleY = 1.0;
+        previewImage.x = 0;
+        previewImage.y = 0;
+    }
+    
+    
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

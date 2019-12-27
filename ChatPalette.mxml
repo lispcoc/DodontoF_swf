@@ -1,0 +1,673 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:ResizableWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:containers="flexlib.containers.*"
+   xmlns:controls="flexlib.controls.*"
+   xmlns:torgtaitai="*"
+   title="{Language.s.chatPallet}"
+   width="220" height="220"
+   visible="false"
+   showCloseButton="true"
+   rollOver="changeLogVisible(event, true)"
+   rollOut="changeLogVisible(event, false)"
+   >
+  
+  <mx:Box id="chatPalet" width="100%" height="100%">
+    
+    <containers:SuperTabNavigator id="tabSpace" 
+            categoryName="ChatPalette"
+			width="100%" height="100%" horizontalGap="0"
+            change="changeTab()"
+            scrollSpeed="25" dropShadowEnabled="true"
+			stopScrollingEvent="{MouseEvent.MOUSE_UP}" startScrollingEvent="{MouseEvent.MOUSE_DOWN}"
+            tabsReordered="reorderTab(event)"
+			closePolicy="{SuperTab.CLOSE_NEVER}"
+      />
+
+    
+    <mx:HBox width="100%" height="20">
+      <mx:Button label="{Language.s.chatPalletEdit}" click="edit()" height="20"
+                 fontSize="10" paddingLeft="0" paddingRight="0" />
+      
+      <mx:Spacer width="20"/>
+      
+      <mx:Button label="{Language.s.chatPalletSave}" click="save()" height="20"
+                 fontSize="10" paddingLeft="0" paddingRight="0" />
+      <mx:Button label="{Language.s.chatPalletLoad}" click="load()" height="20"
+                 fontSize="10" paddingLeft="0" paddingRight="0" />
+      
+      <mx:Spacer width="100%"/>
+      
+      <mx:Button id="addPaletTabButton" label="{Language.s.chatPalletAddTab}"
+                 click="addPaletTabByButton()" height="20"
+                 fontSize="10" paddingLeft="0" paddingRight="0" />
+      
+      <mx:Button id="removePaletTabButton" label="{Language.s.chatPalletDeleteTab}"
+                 click="removePaletTab(tabSpace.selectedIndex)" height="20"
+                 fontSize="10" paddingLeft="0" paddingRight="0" />
+      <mx:Button id="undoPaletTabButton" label="{Language.s.chatPalletUndo}"
+                 click="undoPaletTab()" height="20"
+                 fontSize="10" paddingLeft="0" paddingRight="0" />
+    </mx:HBox>
+    
+  </mx:Box>
+  
+  <mx:Script>
+
+    <![CDATA[
+             
+    import mx.events.FlexEvent;
+    import mx.controls.Alert;
+    import mx.controls.ColorPicker;
+    import mx.core.Application;
+    import flash.geom.Point;
+    import mx.controls.TextInput;
+    import mx.containers.HBox;
+    import mx.controls.ComboBox;
+    import mx.controls.Button;
+    import mx.controls.List;
+    import mx.controls.Label;
+    import mx.controls.Text;
+    import mx.events.ColorPickerEvent;
+    import mx.core.IFlexDisplayObject;
+    import flexlib.controls.tabBarClasses.SuperTab;
+    import flexlib.events.SuperTabEvent;
+    import flexlib.events.TabReorderEvent;
+    
+    
+    private var defaultTabCount:int = 5;
+    
+    private var tabEditors:Array = new Array();
+    
+    
+    [Bindable]
+    private var deletedTabs:Array = new Array();
+    
+    public function setInitPosition():void {
+        setLoadAddAction( loadSaveDataFromLocalCash );
+        if( loadPosition() ) {
+            return;
+        }
+        
+        setInitPositionDefault();
+    }
+    
+    override public function setInitPositionDefault():void {
+        var screenWidth:int = DodontoF_Main.getInstance().getScreenWidth();
+        var screenHeigth:int = DodontoF_Main.getInstance().getScreenHeight();
+        
+        this.x = 100;
+        this.y = 100;
+        this.width = 350;
+        
+        super.setInitPositionDefault();
+    }
+    
+    override public function getSaveInfoKeyName():String {
+        return "ChatPalet";
+    }
+    
+    override public function setup():void {
+        initChatPalet();
+        setInitPosition();
+        
+        if( ChatWindow.getInstance() ) {
+            setChatBackgroundColor(ChatWindow.getInstance().getChatBackgroundColor());
+        }
+        
+        initSaveLoad();
+        setUndoButtonEnable();
+    }
+    
+    
+    private function swapArray(array:Array, index1:int, index2:int):Boolean {
+        if( index1  >= array.length ) {
+            return false;
+        }
+        if( index2  >= array.length ) {
+            return false;
+        }
+        
+        if( index1  < 0 ) {
+            return false;
+        }
+        if( index2  < 0 ) {
+            return false;
+        }
+        
+        var tmp:Object = array[index1];
+        array[index1] = array[index2];
+        array[index2] = tmp;
+        
+        return true;
+    }
+    
+    private function initChatPalet():void {
+        chatPalet.verticalScrollPolicy = "off";//ScrollPolicy.OFF;
+        cleanTabs();
+        
+        for(var i:int = 0; i < defaultTabCount ; i++) {
+            addPaletTab();
+        }
+        
+        var lines:Array = [Language.s.chatPalletInputSample1,
+                           Language.s.chatPalletInputSample2,
+                           Language.s.chatPalletInputSample3,
+                           Language.s.chatPalletInputSample4];
+        
+        var tabEditorInfo:Object = tabEditors[0];
+        setLines(lines, tabEditorInfo);
+        
+        lines = [Language.s.chatPalletInputSample5]
+        tabEditorInfo = tabEditors[1];
+        setLines(lines, tabEditorInfo);
+    }
+    
+    
+    private function addPaletTabByButton():void {
+        addPaletTabButton.enabled = false;
+        
+        addPaletTab();
+        
+        addPaletTabButton.enabled = true;
+        tabSpace.selectedIndex = tabSpace.numChildren - 1;
+        
+        savePosition();
+    }
+    
+    private function addPaletTab():void {
+        var tab:Box = new Box();
+        tab.percentWidth=100;
+        tab.percentHeight=100;
+        
+        var tabIndex:int = (tabSpace.numChildren + 1);
+        var tabEditorInfo:Object = initAddedTab(tab, tabIndex);
+        
+        tabSpace.addChild( tab );
+        tabEditors.push( tabEditorInfo );
+    }
+    
+    
+    private function cleanTabs():void {
+        while( tabSpace.numChildren > 0 ) {
+            tabSpace.removeChildAt(0);
+        }
+        
+        tabEditors.length = 0;
+        deletedTabs.length = 0;
+        
+        setUndoButtonEnable();
+    }
+    
+    private function removePaletTab(index:int):void {
+        
+        var info:Object = getSaveDataByIndex(index);
+        
+        tabSpace.removeChildAt(index);
+        tabEditors.splice(index, 1);
+        
+        deletedTabs.push( info );
+        
+        setUndoButtonEnable();
+        
+        savePosition();
+    }
+    
+    private function setUndoButtonEnable():void {
+        undoPaletTabButton.enabled = (deletedTabs.length != 0);
+    }
+    
+    private function undoPaletTab():void {
+        
+        addPaletTab();
+        
+        var tabInfo:Object = deletedTabs.pop();
+        setUndoButtonEnable();
+        
+        if( tabInfo == null ) {
+            return;
+        }
+        
+        var index:int = tabSpace.numChildren -1;
+        initTabByTabInfo(index, tabInfo);
+    }
+    
+    private function createInputList(input:TextInput, name:TextInput,
+                                     state:ComboBox, colorPicker:ColorPicker,
+                                     tabName:TextInput, changeNameFunction:Function,
+                                     tab:Box):Object {
+        
+        var changer:ChatPaletteChanger = new ChatPaletteChanger();
+        
+        var inputList:List = new List();
+        inputList.percentWidth = 100;
+        inputList.percentHeight = 100;
+        
+        inputList.addEventListener(MouseEvent.CLICK, function(event:MouseEvent):void {
+                
+                var changerInfos:Array = new Array();
+                
+                for each(var tabEditorInfo:Object in tabEditors) {
+                    var changerInfo:Object =
+                        { name: tabEditorInfo.tab.label,
+                          changer: tabEditorInfo.changer };
+                    changerInfos.push( changerInfo );
+                }
+                input.text = changer.getText( inputList.selectedIndex, name, changerInfos );
+            });
+        
+        inputList.doubleClickEnabled = true;
+        inputList.addEventListener(MouseEvent.DOUBLE_CLICK, function(event:Event):void {
+                var sendFunc:Function = getSendChatMessageFunction(input, name, state, colorPicker);
+                sendFunc( null );
+            });
+        
+        
+        var tabEditorInfo:Object = {
+            changeNameFunction : changeNameFunction,
+            name : name,
+            input : input,
+            colorPicker : colorPicker,
+            tabName : tabName,
+            list : inputList,
+            changer : changer,
+            tab : tab };
+        
+        var result:Object =  {
+            tabEditorInfo : tabEditorInfo,
+            inputList: inputList };
+        
+        return result;
+    }
+    
+    private function createCharacterNameBox(name:TextInput, state:ComboBox,
+                                            colorPicker:ColorPicker, tabName:TextInput):Box {
+        var box:HBox = new HBox();
+        box.percentWidth = 100;
+        
+        name.width = 70;
+        tabName.width = 70;
+        
+        var nameLabel:Label = new Label();
+        nameLabel.text = Language.s.chatPalletName;
+        
+        var spacer:Spacer = new Spacer();
+        spacer.percentWidth = 100;
+        
+        var tabNameLabel:Label = new Label();
+        tabNameLabel.text = Language.s.chatPalletTabName;
+        
+        box.addChild(nameLabel);
+        box.addChild(name);
+        box.addChild(state);
+        box.addChild(colorPicker);
+        box.addChild(spacer);
+        box.addChild(tabNameLabel);
+        box.addChild(tabName);
+        
+        colorPicker.toolTip = Language.s.chatPalletColorTips;
+        box.toolTip = Language.s.chatPalletNameTips;
+        
+        return box;
+    }
+    
+    private function createSendBox(input:TextInput, name:TextInput, state:ComboBox, colorPicker:ColorPicker):Box {
+        input.percentWidth = 100;
+        input.addEventListener(FlexEvent.ENTER, getSendChatMessageFunction(input, name, state, colorPicker));
+        
+        var button:Button = new Button();
+        button.label = Language.s.chatPalletSendButton;
+        button.setStyle("paddingLeft", 0);
+        button.setStyle("paddingRight", 0);
+        button.addEventListener(MouseEvent.CLICK, getSendChatMessageFunction(input, name, state, colorPicker));
+        
+        var box:HBox = new HBox();
+        box.percentWidth = 100;
+        box.addChild(input);
+        box.addChild(button);
+
+        return box;
+    }
+    
+    
+    private function initAddedTab(tab:Box, tabIndex:int):Object {
+        var name:TextInput = new TextInput();
+        savePosition();
+
+        var state:ComboBox = new ComboBox();
+        var tabName:TextInput = new TextInput();
+        
+        var colorPicker:ColorPicker = new ColorPicker();
+        colorPicker.selectedItem = 0xFFFFFF;
+        
+        var changeNameFunction:Function = initNameTextInput(name, state, tab, tabName, tabIndex);
+        
+        var nameBox:Box = createCharacterNameBox(name, state, colorPicker, tabName);
+        
+        var input:TextInput = new TextInput();
+        var sendBox:Box = createSendBox(input, name, state, colorPicker);
+        
+        var obj:Object = createInputList( input, name, state, colorPicker,
+                                          tabName, changeNameFunction, tab );
+        var inputList:List = obj.inputList;
+        
+        tab.addChild( nameBox );
+        tab.addChild( sendBox );
+        tab.addChild( inputList );
+        
+        tab.addEventListener(KeyboardEvent.KEY_DOWN, keyDownInChatMessage);
+        
+        
+        colorPicker.addEventListener(ColorPickerEvent.CHANGE, function(event:ColorPickerEvent):void {
+                inputList.setStyle('color', event.color);
+                input.setStyle('color', event.color);
+            });
+        
+        return obj.tabEditorInfo;
+    }
+    
+    
+    private function initNameTextInput(name:TextInput, state:ComboBox,
+                                       tab:Box, tabName:TextInput, tabIndex:int):Function {
+        var changeNameFunction:Function = getChangeNameFunction(name, state, tab, tabName, tabIndex);
+        name.addEventListener(Event.CHANGE, changeNameFunction);
+        tabName.addEventListener(Event.CHANGE, changeNameFunction);
+        
+        changeNameFunction();
+        
+        return changeNameFunction;
+    }
+    
+    
+    private function getChangeNameFunction(name:TextInput, state:ComboBox,
+                                           tab:Box, tabName:TextInput, tabIndex:int):Function {
+        
+        return function(e:Event = null):void {
+            var stateList:Array = ChatWindow.getInstance().getStandingGraphics().findAllStates(name.text);
+            
+            if( stateList.length == 0 ) {
+                state.visible = false;
+                state.width = 0;
+            } else {
+                state.visible = true;
+                state.explicitWidth = NaN;
+            }
+            
+            var dataProvider:Array = [];
+            for(var i:int = 0 ; i < stateList.length ; i++) {
+                var option:Object = {
+                    data : stateList[i],
+                    label : stateList[i]};
+                dataProvider.push(option);
+            }
+            
+            state.dataProvider = dataProvider;
+            
+            tab.label = tabName.text;
+            if( tab.label == "" ) {
+                tab.label = name.text;
+            }
+            if( tab.label == "" ) {
+                tab.label = "" + tabIndex;
+            }
+            
+            savePosition();
+        }
+    };
+    
+    
+    public function keyDownInChatMessage(event:KeyboardEvent):void {
+        
+        if( event.shiftKey && event.ctrlKey ) {
+            if( ChatWindow.getInstance().shiftChatChannel(event) ) {
+                return;
+            }
+        }
+        
+        if( event.ctrlKey ) {
+            if( shiftTab(event) ) {
+                return;
+            }
+        }
+    }
+    
+    private function shiftTab(event:KeyboardEvent):Boolean {
+        var result:Boolean = false;
+        
+        Utils.shiftTabFocus(tabSpace, event, function(index:int):void {
+                var input:TextInput = tabEditors[index].input as TextInput;
+                focusManager.setFocus(input);
+                result = true;
+            });
+        
+        return result;
+    }
+    
+    private function getSendChatMessageFunction(input:TextInput, name:TextInput, state:ComboBox,
+                                                colorPicker:ColorPicker):Function {
+        var resultFunction:Function = function(event:Event):void {
+            
+            var text:String = input.text;
+            text = text.replace(/\\n/g, "\n");
+            text = text.replace(/\\\n/g, "\\n");
+            
+            var chatWindow:ChatWindow = DodontoF_Main.getInstance().getChatWindow();
+            var data:ChatSendData = new ChatSendData(chatWindow.getSelectedChatChannleIndex(),
+                                                     text, name.text, state.text);
+            data.setColor(colorPicker.selectedColor);
+            
+            chatWindow.sendChatMessageByChatSendData(data);
+            input.callLater(function():void{input.text = ""});
+        };
+        
+        return resultFunction;
+    }
+    
+    public function edit():void {
+        var tabEditorInfo:Object = tabEditors[tabSpace.selectedIndex];
+        var inputList:List = tabEditorInfo.list as List;
+        
+        var array:Array = []
+        if( inputList.dataProvider != null ) {
+            array = inputList.dataProvider.source;
+        }
+        
+        var window:EditChatPaletteWindow = DodontoF.popup(EditChatPaletteWindow, true) as EditChatPaletteWindow;
+        window.initParams(array, function(lines:Array):void {
+                setLines(lines, tabEditorInfo);
+                savePosition();
+            });
+    }
+    
+    private function setLines(lines:Array, tabEditorInfo:Object):void {
+        var inputList:List = tabEditorInfo.list as List;
+        var changer:ChatPaletteChanger = tabEditorInfo.changer as ChatPaletteChanger;
+        
+        inputList.dataProvider = lines;
+        changer.setTexts(lines);
+        changer.analize();
+    }
+    
+    
+    override protected function getWindowInfoSaveData(window:IFlexDisplayObject):Object {
+        var info:Object = super.getWindowInfoSaveData(this);
+        info.saveData = getSaveData();
+        
+        return info;
+    }
+    
+    private function loadSaveDataFromLocalCash(info:Object):void {
+        if( info.saveData != null ) {
+            loadSaveData( info.saveData );
+        }
+    }
+    
+    
+    private var saveLoadLocalFile:SaveLoadLocalFile = new SaveLoadLocalFile();
+    
+    private function initSaveLoad():void {
+        saveLoadLocalFile.init(Language.s.chatPalletSaveData, "cpd", "ChatPalette2",
+                               function(saveData:Object):void { loadSaveData(saveData) } );
+    }
+    
+    public function save():void {
+        var saveData:Object = getSaveData();
+        saveLoadLocalFile.save(saveData, "ChatPalette");
+    }
+    
+    public function getSaveData():Object {
+        var saveData:Object = new Object();
+        
+        saveData.tabInfos = [];
+        
+        for(var i:int = 0 ; i < tabSpace.numChildren ; i++) {
+            var tabInfo:Object = getSaveDataByIndex(i);
+            if( tabInfo == null ) {
+                break;
+            }
+            saveData.tabInfos.push(tabInfo);
+        }
+        
+        return saveData;
+    }
+    
+    private function getSaveDataByIndex(index:int):Object {
+        var tabEditorInfo:Object = tabEditors[index];
+        
+        var lines:Array = [];
+        if( tabEditorInfo == null ) {
+            return null;
+        }
+        
+        var inputList:List = tabEditorInfo.list as List;
+        if( inputList.dataProvider != null ) {
+            lines = inputList.dataProvider.source;
+        }
+        
+        var tabInfo:Object = new Object();
+        tabInfo.lines = lines;
+        tabInfo.name = tabEditorInfo.name.text;
+        tabInfo.color = tabEditorInfo.colorPicker.selectedColor;
+        tabInfo.tabName = tabEditorInfo.tabName.text;
+        
+        return tabInfo;
+    }
+    
+    public function load():void {
+        saveLoadLocalFile.load();
+    }
+    
+    public function loadSaveData(saveData:Object):void {
+        cleanTabs();
+        
+        var tabInfos:Object = saveData.tabInfos;
+        
+        for(var i:int = 0 ; i < tabInfos.length ; i++) {
+            addPaletTab();
+            var tabInfo:Object = tabInfos[i];
+            initTabByTabInfo(i, tabInfo);
+        }
+    }
+    
+    private function initTabByTabInfo(index:int, tabInfo:Object):void {
+        var tabEditorInfo:Object = tabEditors[index];
+        
+        setLines(tabInfo.lines, tabEditorInfo);
+        tabEditorInfo.name.text = tabInfo.name;
+        
+        if( tabInfo.color != null ) {
+            tabEditorInfo.colorPicker.selectedColor = tabInfo.color;
+        }
+        
+        if( tabInfo.tabName != null ) {
+            tabEditorInfo.tabName.text = tabInfo.tabName;
+        }
+        
+        tabEditorInfo.changeNameFunction();
+    }
+    
+    private function loadOnChatPalette1(saveData:Object):void {
+        var chatPaletteStrings:Array = saveData as Array;
+        var paletteCountParTab:int = Config.getInstance().getPaletteCountParTab();
+        
+        var tabCount:int = (chatPaletteStrings.length / paletteCountParTab);
+        
+        var lines:Array = [];
+        for(var i:int = 0 ; i < tabCount ; i++) {
+            lines = [];
+            addPaletTab();
+            
+            for(var j:int = 0 ; j < paletteCountParTab ; j++) {
+                var line:String = chatPaletteStrings[ i * paletteCountParTab + j ];
+                lines.push( line );
+            }
+            
+            var tabEditorInfo:Object = tabEditors[i];
+            setLines(lines, tabEditorInfo);
+        }
+    }
+    
+    public function loadFromText(dataString:String):void {
+        saveLoadLocalFile.loadFromText(dataString);
+    }
+
+    
+    private function changeLogVisible(event:MouseEvent, visible:Boolean):void {
+        DodontoF_Main.getInstance().getChatWindow().changeLogVisible(event, visible);
+    }
+    
+    public function setChatBackgroundColor(color:String):void {
+        //chatMessageInput.setStyle('backgroundColor', '0x' + color);
+        
+        for(var i:int = 0 ; i < tabSpace.numChildren ; i++) {
+            var info:Object = tabEditors[i];
+            if(info == null) {
+                continue;
+            }
+            
+            var inputList:List = tabEditors[i].list as List;
+            if(inputList == null) {
+                continue;
+            }
+            inputList.setStyle('backgroundColor', '0x' + color);
+            
+            var input:TextInput = tabEditors[i].input as TextInput;
+            if(input == null) {
+                continue;
+            }
+            input.setStyle('backgroundColor', '0x' + color);
+        }
+    }
+
+    public function changeTab():void {
+        var index:int = tabSpace.selectedIndex;
+        var color:String = ChatWindow.getInstance().getChannelColor(index);
+        setStyle("backgroundColor", color);
+    }
+    
+    private function reorderTab(event:TabReorderEvent):void {
+        var oldIndex:int = event.oldIndex;
+        var newIndex:int = event.newIndex;
+        
+        swap(tabEditors, oldIndex, newIndex);
+    }
+    
+    private function swap(targets:Array, oldIndex:int, newIndex:int):void {
+        var array:Array = tabEditors.splice(oldIndex, 1);
+        if( array.length != 1 ) {
+            //Log.loggingError("array.length is NOT 1");
+            return;
+        }
+        
+        if( newIndex > oldIndex ) {
+            newIndex -= 1;
+        }
+        
+        tabEditors.insertAt(newIndex, array[0]);
+    }
+    
+             ]]>
+      
+  </mx:Script>
+  
+</torgtaitai:ResizableWindow>

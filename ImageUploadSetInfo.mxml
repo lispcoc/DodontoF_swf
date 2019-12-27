@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml"
+        xmlns:torgtaitai="*" 
+        alpha="1"
+        creationComplete="setup();"
+        >
+  
+  <mx:HBox height="{Config.fontSize + 10}" width="100%" horizontalAlign="left" verticalAlign="middle">
+    <mx:Label text="{Language.s.uploadImageFormat}"/>
+    <mx:Spacer width="100%" />
+    <mx:ComboBox id="isLocal" 
+                 height="{Config.fontSize + 10}" visible="false" enabled="false"
+                 fontWeight="normal" toolTip="{isLocal.selectedItem.toolTip}">
+      <mx:Object id="privateIItem" label="{Language.s.uploadPrivate}" data="true" toolTip="{Language.s.uploadPrivateToolTips}" />
+      <mx:Object id="publicItem" label="{Language.s.uploadPublic}" data="false" toolTip="{Language.s.uploadPublicToolTips}" />
+    </mx:ComboBox>
+    <mx:Label id="passwordStatus" text="" width="100%" textAlign="right" />
+    <mx:Button height="{Config.fontSize + 10}" label="{Language.s.secretImagePassword}" fontWeight="normal" click="createPasswordWindow()" />
+  </mx:HBox>
+  
+  <mx:HBox height="{Config.fontSize + 15}" width="100%" horizontalAlign="center" verticalAlign="middle">
+	<mx:Label text="{Language.s.addedTags}" />
+	<mx:TextInput id="tagText" text="" width="100%" />
+    <mx:ComboBox id="imageType" fontWeight="normal"  width="120" editable="false" change="imageTypeChanged()" >
+    </mx:ComboBox>
+  </mx:HBox>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.events.FlexEvent;
+    import mx.controls.Image;
+    
+    private var passwordText:String = "";
+    
+    public function imageTypeChanged():void {
+        tagText.text = imageType.selectedItem.label + "　";
+        tagText.toolTip = "";
+        
+        if( imageType.selectedItem.label == ImageTag.getMapTag() ) {
+            tagText.toolTip = Language.s.addedTagsTips;
+        }
+    }
+    
+    private function setup():void {
+        var tags:Array = ImageTag.getDefinedTagList();
+        
+        var imageTag:ImageTag = new ImageTag();
+        imageTag.setImageTypes(imageType, new Object(), tags);
+    }
+    
+    public function setUploadMode():void {
+        
+        isLocal.visible = true;
+        
+        if( ! Config.getInstance().canUploadImageOnPublic ) {
+            isLocal.selectedItem = privateIItem;
+            return;
+        }
+        
+        isLocal.enabled = true;
+    }
+    
+    public function getTagText():String {
+        return tagText.text;
+    }
+    
+    public function setTagText(text:String):void {
+        tagText.text = text;
+    }
+    
+    public function getPassword():String {
+        return passwordText;
+    }
+    
+    public function setPassword(password:String):void {
+        passwordText = password;
+        checkPasswordStatus();
+    }
+    
+    public function getTagInfo():Object {
+        var tagInfo:Object = TagManagerWindow.getTagInfo(tagText.text, passwordText, isLocal.selectedItem.data);
+        return tagInfo;
+    }
+    
+    private function createPasswordWindow():void {
+        var window:InputTextWindow = DodontoF.popup(InputTextWindow, true) as InputTextWindow;
+        var infoTexts:Array = Language.s.imageUploaderSecretPasswordInfo.split("\n")
+        window.init(infoTexts, Language.s.secreteImagePasswordInput, Language.s.inputPassword, setPassword);
+    }
+    
+    private function checkPasswordStatus():void {
+        passwordStatus.text = (passwordText == "" ? Language.s.nopassword : Language.s.passworded);
+    }
+    
+    
+    ]]>
+  </mx:Script>
+  
+</mx:Box>

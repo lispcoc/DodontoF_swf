@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="400"
+   height="350"
+   title="{Language.s.standingGraphic}" 
+   showCloseButton="true"
+   >
+  <mx:HBox width="100%" height="100%">
+    
+    <mx:Box width="100%" height="100%">
+	  <mx:DataGrid id="effectInfosList"
+                   dragEnabled="true"
+                   dropEnabled="true"
+                   dragMoveEnabled="true"
+                   dragComplete="dragComplete(event)"
+                   width="100%"
+                   height="100%"
+                   dataProvider="{ standingGraphicInfos }"
+                   editable="false"
+		           draggableColumns="false"
+                   allowMultipleSelection="true"
+                   >
+	    <mx:columns>
+		  <mx:DataGridColumn headerText="{Language.s.standingGraphicNameColumn}"
+                             dataField="name"
+                             textAlign="center"
+                             width="50"/>
+		  <mx:DataGridColumn headerText="{Language.s.standingGraphicStateColumn}"
+                             dataField="state"
+                             textAlign="center"
+                             width="50"/>
+		  <mx:DataGridColumn headerText="{Language.s.standingGraphicPositionColumn}"
+                             dataField="leftIndex"
+                             textAlign="center"
+                             width="20"/>
+		  <mx:DataGridColumn headerText="{Language.s.standingGraphicImageFile}"
+                             dataField="source"
+                             textAlign="center"
+                             width="100"/>
+	    </mx:columns>
+	  </mx:DataGrid>
+      
+      <mx:HBox id="editBox" width="100%" horizontalAlign="center" verticalAlign="middle">
+        <mx:Button label="{Language.s.addButton}" click="addEffect()" />
+        <mx:Button label="{Language.s.changeButton}" click="changeEffect()" />
+        <mx:Button label="{Language.s.deleteButton}"  click="removeEffect()" />
+        <mx:Spacer width="100%" />
+        <mx:Button label="{Language.s.closeButton}"  click="PopUpManager.removePopUp(this)" />
+      </mx:HBox>
+      
+    </mx:Box>
+    
+  </mx:HBox>
+  <mx:Script>
+    <![CDATA[
+             
+    [Bindable] public static var standingGraphicInfos:Array = new Array();
+        
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.controls.Alert;
+    import mx.events.CloseEvent;
+    import mx.events.DragEvent;
+    
+    
+    override protected function setup():void {
+        try {
+            Resizer.addResize(this,new Point(100,50));
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    
+    private function addEffect():void {
+        status = "";
+    
+        DodontoF.popup(AddStandingGraphicsWindow, true);
+    }
+
+
+    private function removeEffect():void {
+        status = "";
+        
+        var infos:Array = effectInfosList.selectedItems;
+        checkQuestionForRemoveEffect(infos);
+    }
+    
+    private function checkQuestionForRemoveEffect(infos:Array):void {
+        var message:String = "";
+        var effectIds:Array = new Array();
+        
+        for(var i:int = 0 ; i < infos.length ; i++) {
+            var info:Object = infos[i];
+            message += Language.s.characterName + info.name + "　";
+            message += Language.s.standingGraphicState + info.state + "\n";
+            //message += Language.s.imageFileName + info.source + "\n";
+            
+            effectIds.push(info.effectId);
+        }
+        
+        message += "\n";
+        message += Language.s.deleteStandingGraphicStateQuestion;
+        
+        Alert.show(message, Language.s.deleteStandingGraphicStateQuestionTitle, 
+                   Alert.OK | Alert.CANCEL, null, 
+                   function(e : CloseEvent) : void {
+                       if (e.detail == Alert.OK) {
+                           removeEffectAfterCheck(effectIds);
+                       }});
+    }
+
+
+    private function removeEffectAfterCheck(effectIds:Array):void {
+        var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+        guiInputSender.removeEffect(effectIds);
+    }
+    
+    
+    private function changeEffect():void {
+        status = "";
+        
+        var info:Object = getStandInfo();
+        
+        if( info == null ) {
+            return;
+        }
+        
+        if( info.effectId == null ) {
+            return;
+        }
+        
+        var window:ChangeStandingGraphicsWindow =
+        DodontoF.popup(ChangeStandingGraphicsWindow, true) as ChangeStandingGraphicsWindow;
+        window.init(info);
+    }
+    
+    /*
+    private function getEffectInfoAndIndex():Array {
+        var index:int = effectInfosList.selectedIndex;
+        return getEffectInfoAndIndexByIndex(index);
+    }
+    
+    private function getEffectInfoAndIndexByIndex(index:int):Array {
+        status = "";
+    
+        if( index == -1 ) {
+            status = Language.s.selectStandingImage;
+            return [null, index];
+        }
+    
+        return [standingGraphicInfos[index], index];
+    }
+
+    private function getEffectInfo():Object {
+        return getEffectInfoAndIndex()[0];
+    }
+
+    private function changeEffect():void {
+        status = "";
+        
+        var results:Array = getEffectInfoAndIndex();
+        var effectInfo:Object = results[0];
+        var index:int = results[1];
+        
+        if( effectInfo == null ) {
+            return;
+        }
+        
+        if( effectInfo.effectId == null ) {
+            return;
+        }
+        
+        var window:ChangeStandingGraphicsWindow =
+        DodontoF.popup(ChangeStandingGraphicsWindow, true) as ChangeStandingGraphicsWindow;
+        window.init(effectInfo, index);
+    }
+
+     */
+    
+    private function getStandInfo():Object {
+        status = "";
+        
+        var obj:Object = effectInfosList.selectedItem;
+        Log.logging("getStandInfo selectedItem", obj);
+        
+        if( obj == null ) {
+            status = Language.s.pleaseSelectCutIn;
+                    
+        }
+        
+        return obj;
+    }
+    
+    
+    private function dragComplete(event:DragEvent):void { 
+        var paramsList:Array = Utils.clone(standingGraphicInfos);
+        for each(var params:Object in paramsList) {
+                delete params.mx_internal_uid;
+            }
+        
+        Log.logging("dragComplete paramsList", paramsList);
+        
+        var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+        guiInputSender.changeEffectsAll(paramsList);
+    }
+    
+    ]]>
+  </mx:Script>
+
+</torgtaitai:CommonPopupWindow>

@@ -1,0 +1,2052 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:ResizableWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*"
+   title="{Language.s.initiativeWindowTitle}"
+   width="10" height="300"
+   showCloseButton="true"
+   verticalScrollPolicy="off"
+  >
+  
+  <mx:HBox id="roundBaseBox"
+          width="100%" height="{Config.fontSize + 5}"
+          horizontalAlign="center"
+          verticalGap="1"
+          >
+    <mx:Button id="prevButton" height="{Config.fontSize + 5}" paddingLeft="2" paddingRight="2" label="{Language.s.initiativeWindowBackButton}" click="previous()" />
+    <mx:Button id="nextButton" height="{Config.fontSize + 5}" width="40" paddingLeft="2" paddingRight="2" label="{Language.s.initiativeWindowNextButton}" click="next()" />
+    
+    <mx:Spacer width="100%" />
+    
+    <mx:Button id="resetButton" height="{Config.fontSize + 5}" width="60" paddingLeft="2" paddingRight="2" label="{Language.s.initiativeWindowInitButton}" click="reset()" />
+      
+    <mx:Spacer width="5" />
+    <mx:Button id="setConfigButton" height="{Config.fontSize + 5}" width="40" paddingLeft="2" paddingRight="2" label="{Language.s.initiativeWindowConfigButton}" click="setConfig()" />
+    
+  </mx:HBox>
+  
+  <mx:DataGrid id="initiativeInfoListView"
+               width="100%"
+               height="100%"
+               dataProvider="{initiativeInfoList}"
+               sortableColumns="false"
+		       draggableColumns="false"
+               enabled="true"
+               editable="true"
+               click="clickInitiativeInfoListView()"
+               doubleClickEnabled="true"
+               doubleClick="doubleclickInitiativeInfoListView()"
+               showDataTips="false"
+               dataTipFunction="getCharacterInfoTip"
+               itemEditBegin="initiativeInfoListItemEditBegin(event)"
+               itemEditEnd="initiativeInfoListItemEditEndFunction(event)"
+               dragEnabled="true"
+               >
+	<mx:columns>
+	  <mx:DataGridColumn headerText="{Language.s.initiativeWindowColumnTitleOrder}"
+                         dataField="currentTarget"
+                         textAlign="left"
+                         editable="false"
+      	                 minWidth="0"
+                         width="10"
+                         />
+	  <mx:DataGridColumn headerText="{Language.s.initiativeWindowColumnTitleInitiative}"
+                         editorDataField="value"
+                         dataField="initiativeInt"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="0"
+                         width="30">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+	  <mx:DataGridColumn headerText="{Language.s.initiativeWindowColumnTitleInitiativeModify}"
+                         editorDataField="value"
+                         dataField="initiativeModify"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="0"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="90" minimum="-9" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+	  <mx:DataGridColumn headerText="{Language.s.initiativeWindowColumnTitleCharacterName}"
+                         dataField="characterName"
+                         textAlign="left"
+                         editable="false"
+      	                 minWidth="20"
+                         width="30"
+                         />
+      
+      <!-- 一番手抜きなやり方で、カウンター30個羅列（あぁ…僕はなんてい卑しいんだ…）-->
+      
+      
+      
+      <mx:DataGridColumn id="counter0"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter0"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox0"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox0"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor0}" enabled="{data.checkBoxEnable0}" label="{data.checkBoxLabel0}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+         
+	  <mx:DataGridColumn id="counter1"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter1"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox1"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox1"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor1}" enabled="{data.checkBoxEnable1}" label="{data.checkBoxLabel1}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+         
+	  <mx:DataGridColumn id="counter2"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter2"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox2"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox2"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor2}" enabled="{data.checkBoxEnable2}" label="{data.checkBoxLabel2}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+         
+	  <mx:DataGridColumn id="counter3"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter3"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox3"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox3"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor3}" enabled="{data.checkBoxEnable3}" label="{data.checkBoxLabel3}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+      
+	  <mx:DataGridColumn id="counter4"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter4"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox4"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox4"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor4}" enabled="{data.checkBoxEnable4}" label="{data.checkBoxLabel4}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+         
+	  <mx:DataGridColumn id="counter5"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter5"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox5"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox5"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor5}" enabled="{data.checkBoxEnable5}" label="{data.checkBoxLabel5}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+         
+	  <mx:DataGridColumn id="counter6"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter6"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox6"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox6"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor6}" enabled="{data.checkBoxEnable6}" label="{data.checkBoxLabel6}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+         
+	  <mx:DataGridColumn id="counter7"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter7"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox7"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox7"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor7}" enabled="{data.checkBoxEnable7}" label="{data.checkBoxLabel7}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+         
+	  <mx:DataGridColumn id="counter8"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter8"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox8"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox8"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor8}" enabled="{data.checkBoxEnable8}" label="{data.checkBoxLabel8}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+         
+	  <mx:DataGridColumn id="counter9"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter9"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox9"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox9"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor9}" enabled="{data.checkBoxEnable9}" label="{data.checkBoxLabel9}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+
+	  <mx:DataGridColumn id="counter10"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter10"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox10"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox10"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor10}" enabled="{data.checkBoxEnable10}" label="{data.checkBoxLabel10}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter11"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter11"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox11"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox11"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor11}" enabled="{data.checkBoxEnable11}" label="{data.checkBoxLabel11}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter12"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter12"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox12"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox12"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor12}" enabled="{data.checkBoxEnable12}" label="{data.checkBoxLabel12}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter13"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter13"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox13"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox13"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor13}" enabled="{data.checkBoxEnable13}" label="{data.checkBoxLabel13}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter14"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter14"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox14"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox14"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor14}" enabled="{data.checkBoxEnable14}" label="{data.checkBoxLabel14}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter15"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter15"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox15"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox15"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor15}" enabled="{data.checkBoxEnable15}" label="{data.checkBoxLabel15}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter16"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter16"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox16"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox16"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor16}" enabled="{data.checkBoxEnable16}" label="{data.checkBoxLabel16}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter17"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter17"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox17"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox17"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor17}" enabled="{data.checkBoxEnable17}" label="{data.checkBoxLabel17}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter18"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter18"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox18"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox18"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor18}" enabled="{data.checkBoxEnable18}" label="{data.checkBoxLabel18}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter19"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter19"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox19"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox19"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor19}" enabled="{data.checkBoxEnable19}" label="{data.checkBoxLabel19}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter20"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter20"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox20"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox20"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor20}" enabled="{data.checkBoxEnable20}" label="{data.checkBoxLabel20}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter21"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter21"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox21"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox21"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor21}" enabled="{data.checkBoxEnable21}" label="{data.checkBoxLabel21}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter22"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter22"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox22"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox22"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor22}" enabled="{data.checkBoxEnable22}" label="{data.checkBoxLabel22}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter23"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter23"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox23"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox23"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor23}" enabled="{data.checkBoxEnable23}" label="{data.checkBoxLabel23}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter24"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter24"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox24"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox24"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor24}" enabled="{data.checkBoxEnable24}" label="{data.checkBoxLabel24}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter25"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter25"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox25"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox25"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor25}" enabled="{data.checkBoxEnable25}" label="{data.checkBoxLabel25}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter26"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter26"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox26"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox26"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor26}" enabled="{data.checkBoxEnable26}" label="{data.checkBoxLabel26}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter27"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter27"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox27"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox27"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor27}" enabled="{data.checkBoxEnable27}" label="{data.checkBoxLabel27}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter28"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter28"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox28"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox28"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor28}" enabled="{data.checkBoxEnable28}" label="{data.checkBoxLabel28}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+	  <mx:DataGridColumn id="counter29"
+                         visible="false"
+                         headerText=""
+                         editorDataField="value"
+                         dataField="counter29"
+                         textAlign="left"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25">
+        <mx:itemEditor>
+          <mx:Component>
+            <mx:NumericStepper maximum="9999999999" minimum="-9999999999" />
+          </mx:Component>
+        </mx:itemEditor>
+      </mx:DataGridColumn>
+      
+      <mx:DataGridColumn id="checkBox29"
+                         visible="false"
+                         headerText=""
+                         editorDataField="selected"
+                         dataField="checkBox29"
+                         textAlign="center"
+                         editable="true"
+      	                 minWidth="15"
+                         width="25"
+                         rendererIsEditor="true"
+                         >
+        <mx:itemRenderer>
+          <mx:Component>
+            <mx:CheckBox iconColor="{data.columnColor29}" enabled="{data.checkBoxEnable29}" label="{data.checkBoxLabel29}" />
+          </mx:Component>
+        </mx:itemRenderer>
+      </mx:DataGridColumn>
+	  
+      <mx:DataGridColumn headerText="counterEnd"
+                         id="counterEnd" width="0" visible="false" />
+      
+	  <mx:DataGridColumn headerText="{Language.s.initiativeWindowColumnTitleInfo}"
+                         dataField="info"
+                         textAlign="left"
+                         editable="true"
+                         itemEditor="InitiativeWindowEditor"
+                         editorUsesEnterKey="true"
+                         width="100"
+                         />
+	</mx:columns>
+  </mx:DataGrid>
+  
+  <mx:HBox width="100%" height="{Config.fontSize + 5}"
+          horizontalAlign="center"
+          verticalGap="1"
+          >
+    <mx:Button id="editButton" height="{Config.fontSize + 5}" paddingLeft="2" paddingRight="2" label="{Language.s.editButton}" click="editListCharacter()" />
+    <mx:Spacer width="5" />
+    <mx:Button id="deleteButton" height="{Config.fontSize + 5}" paddingLeft="2" paddingRight="2" label="{Language.s.deleteButton}" click="removeListCharacter()" />
+  </mx:HBox>
+    
+  <mx:Script>
+    <![CDATA[
+      [Bindable]
+      private var initiativeInfoList:Array;
+      
+      import mx.core.IFlexDisplayObject;
+      import mx.events.DragEvent;
+      import mx.managers.DragManager;
+      import mx.events.ListEvent;
+      import mx.controls.dataGridClasses.DataGridColumn;
+      import mx.controls.NumericStepper;
+      import mx.controls.TextInput;
+      import mx.events.DataGridEvent;
+      import mx.collections.ArrayCollection;
+      import mx.core.Application;
+      import mx.managers.PopUpManager;
+      import mx.controls.Alert;
+      import flash.events.Event;
+      import flash.events.FocusEvent;
+      import mx.controls.TextArea;
+      import mx.containers.Box;
+      import mx.containers.HBox;
+      import mx.controls.Label;
+      import flash.events.KeyboardEvent;
+      import mx.effects.Glow;
+      import mx.controls.TextArea;
+      import mx.controls.CheckBox;
+      import mx.styles.CSSStyleDeclaration;
+      
+      private function getRoundTimer():RoundTimer {
+        var roundTimer:RoundTimer = DodontoF_Main.getInstance().getRoundTimer();
+        Log.logging("InitiativeWindow init roundTimer", roundTimer);
+        return roundTimer;
+      }
+
+      override public function getSaveInfoKeyName():String {
+          return "InitiativeWindow";
+      }
+        
+      override public function setup():void {
+          initiativeInfoList = new Array();
+          instance = this;
+          setInitPosition();
+          
+          setResizeEventFunction( resizeInitiativeInfoBox );
+          resizeInitiativeInfoBox.call();
+          initContextMenu();
+          
+          if( ! defaultColors ){
+              // 初期値のカラーパターンを記憶
+              defaultColors = initiativeInfoListView.getStyle("alternatingItemColors");
+          }
+          
+          initiativeInfoListView.addEventListener(DataGridEvent.COLUMN_STRETCH, changeColumnWidth);
+          
+          initCheckBoxColumnHeaderStyles();
+      }
+      
+      private var defaultColors:Array;
+      
+      private var characterMenu:ContextMenuItem;
+      
+      protected function initContextMenu():void {
+            var menu:ContextMenu = new ContextMenu();
+            menu.hideBuiltInItems();
+            characterMenu = MovablePiece.addMenuItem(menu, Language.s.deleteSelectedCharacter, getContextMenuItemRemoveCharacter, true);
+            this.contextMenu = menu;
+            
+            /*
+            initiativeInfoListView.addEventListener(mx.events.ListEvent.ITEM_ROLL_OVER,
+                                                    function(event:mx.events.ListEvent ):void {
+                    deleteButton.editable = false;
+                    
+                    if( event == null ) {
+                        return;
+                    }
+                    
+                    var info:Object = initiativeInfoList[event.rowIndex];
+                    if( info == null ) {
+                        return;
+                    }
+                    
+                    var piece:InitiativedMovablePiece = info["character"];
+                    if( piece == null ) {
+                        return;
+                    }
+                    
+                    deleteButton.editable = true;
+                    //characterMenu.visible = piece.canDeleteOnInitiativeList();
+                });
+            */
+      }
+      
+      
+      public function getDoropedInitiativedMovablePiece(event:DragEvent):InitiativedMovablePiece {
+          var index:int = initiativeInfoListView.calculateDropIndex(event);
+        
+          var info:Object = initiativeInfoList[ index ];
+          if( info == null ) {
+              return null;
+          }
+          
+          var piece:InitiativedMovablePiece = info["character"];
+          return piece;
+      }
+      
+      private function getContextMenuItemRemoveCharacter(event:ContextMenuEvent):void {
+          var info:Object = initiativeInfoList[ initiativeInfoListView.selectedIndex ];
+          if( info == null ) {
+              return;
+          }
+          
+          var piece:MagicTimer = info["character"] as MagicTimer;
+          if( piece == null ) {
+              return;
+          }
+          
+          piece.popUpDeleteWindow();
+      }
+      
+      public function resizeInitiativeInfoBox():void {
+      }
+      
+      public function getCheckBoxInfos():Array {
+          var checkBoxInfos:Array = [];
+          
+          var counterNames:Array = getCounterNames();
+          
+          for(var i:int = 0 ; i < counterNames.length ; i++) {
+              var counterName:String = counterNames[i];
+              
+              var columnInfo:Object = getColumnInfo(counterName, checkBoxInfos.length);
+              if( ! columnInfo.isCheckBox ) {
+                  continue;
+              }
+              
+              checkBoxInfos.push(columnInfo);
+          }
+          
+          return checkBoxInfos;
+      }
+      
+      public function getCounterNameList():Array {
+          return Utils.clone( getCounterNames() );
+      }
+      
+      private function getCounterNames():Array {
+          return getRoundTimer().getCounterNames();
+      }
+      
+      public function getTrueCounterName(counterName:String):String {
+          var names:Array = getCounterNames();
+          
+          for(var i:int = 0 ; i < names.length ; i++) {
+              
+              var trueName:String = names[i];
+              var info:Object = getCounterNameInfo( trueName );
+              var name:String = info["name"];
+              
+              if( name == counterName ) {
+                  return trueName;
+              }
+          }
+          
+          return "";
+      }
+      
+      
+      private var preCounterNames:Array = new Array();
+      
+      private function initColumns():void {
+          var counterNames:Array = getCounterNames();
+          if( Utils.isSameArray(counterNames, preCounterNames) ) {
+              Log.loggingTuning("columns is same.");
+              return;
+          }
+          preCounterNames = counterNames;
+          Log.loggingTuning("columns is diff!!")
+          
+          var checkBoxIndex:int = 0;
+          var counterBeginIndex:int = -1;
+          var columns:Array = initiativeInfoListView.columns;
+          for(var i:int = 0 ; i < columns.length ; i++) {
+              var column:DataGridColumn = columns[i];
+              var checkBoxColumn:DataGridColumn = columns[i + 1];
+              
+              if( column == counterEnd ) {
+                  break;
+              }
+              
+              if( column == counter0 ) {
+                  counterBeginIndex = i;
+              }
+              
+              if( counterBeginIndex == -1 ) {
+                  continue;
+              }
+              
+              var index:int = i - counterBeginIndex;
+              if( (index % 2) != 0 ) {
+                  continue;
+              }
+              
+              var counterIndex:int = index / 2;
+              
+              if( counterIndex >= counterNames.length ) {
+                  column.visible = false;
+                  checkBoxColumn.visible = false;
+                  continue;
+              }
+              
+              var counterName:String = counterNames[counterIndex];
+              var columnInfo:Object = getColumnInfo(counterName, checkBoxIndex);
+              
+              var mainColumn:DataGridColumn = null;
+              var subColumn:DataGridColumn = null;
+              if( columnInfo.isCheckBox ) {
+                  subColumn = column;
+                  mainColumn = checkBoxColumn;
+                  
+                  //var headerStyle:CSSStyleDeclaration = checkBoxColumnHeaderStyles[checkBoxIndex];
+                  //mainColumn.setStyle("headerStyleName", headerStyle);
+                  
+                  checkBoxIndex++;
+              } else {
+                  subColumn = checkBoxColumn;
+                  mainColumn = column;
+              }
+              
+              subColumn.visible = false;
+              mainColumn.visible = true;
+              mainColumn.headerText = getColumnTitle(columnInfo.title);
+          }
+          
+          loadColumnInfosAfter();
+      }
+      
+      static public function getColumnTitle(title:String):String {
+          var name:String = title;
+          
+          var max:RegExp = new RegExp("(.+)" + getMaxValueMarker() + "$");
+          var maxMatched:Object = max.exec(title);
+          if( maxMatched != null ) {
+              name = maxMatched[1];
+              return Language.text("initiativeColumnMaxFormat", name);
+          }
+          var min:RegExp = new RegExp("(.+)" + getMinValueMarker() + "$");
+          var minMatched:Object = min.exec(title);
+          if( minMatched != null ) {
+              name = minMatched[1];
+              return Language.text("initiativeColumnMinFormat", name);
+          }
+          
+          
+          var info:Object = getCounterNameInfo(title);
+          return info["name"];
+      }
+
+      
+      static private var checkBoxColumnHeaderStyles:Array;
+      
+      static public function initCheckBoxColumnHeaderStyles():void {
+          checkBoxColumnHeaderStyles = new Array();
+          
+          var colors:Array = checkBoxDefaultColors;
+          for(var i:int = 0 ; i < colors.length ; i++) {
+              var color:String = colors[i];
+              
+              var style:CSSStyleDeclaration = new CSSStyleDeclaration;
+              style.setStyle("color", color);
+              
+              checkBoxColumnHeaderStyles.push(style);
+          }
+      }
+      
+      static private var checkBoxDefaultColors:Array
+      = [0xD40045,
+         0x99CF15,
+         0x0F218B,
+         0xFF7F00,
+         0x008678,
+         0x56007D,
+         0xFE4118,
+         0x33A23D,
+         0x281285,
+         0xFFE600,
+         0x055D87,
+         0xAF0065];
+      
+      static public function getCheckBoxDefaultColor(index:int):String {
+          var colors:Array = checkBoxDefaultColors;
+          return colors[ (index % colors.length) ];
+      }
+      
+      static public function getColumnInfo(counterName:String, index:int = 0):Object {
+          var columnInfo:Object = {
+              "counterName": counterName,
+              "isCheckBox": false,
+              "title": counterName,
+              "color": null
+          };
+          
+          var checkBoxInfo:Object = getCheckBoxInfoFromCounterName(counterName);
+          columnInfo.isCheckBox = checkBoxInfo.isCheckBox;
+          columnInfo.title = checkBoxInfo.title;
+          
+          if( columnInfo.isCheckBox ) {
+              columnInfo.color = getCheckBoxDefaultColor(index);
+          }
+          
+          return columnInfo;
+      }
+      
+      static public function getCheckBoxInfoFromCounterName(counterName:String):Object {
+          var result:Object = {
+              "isCheckBox": false,
+              "title": counterName
+          };
+          
+          var matchResult:Object = counterCheckReg.exec(counterName);
+          if( matchResult == null ) {
+              return result;
+          }
+          
+          result.isCheckBox = (matchResult[1] != null);
+          result.title = matchResult[2];
+          
+          return result;
+      }
+      
+      static private var counterCheckReg:RegExp = /^(\*|＊)?([^#]+)?$/;
+      
+      
+      public function getListCharacter():InitiativedPiece {
+          var info:Object = initiativeInfoList[ initiativeInfoListView.selectedIndex ];
+          if( info == null ) {
+              return null;
+          }
+          
+          var piece:InitiativedPiece = info["character"] as InitiativedPiece;
+          return piece;
+      }
+      
+      public function removeListCharacter():void {
+          var piece:InitiativedPiece = getListCharacter();
+          if( piece == null ) {
+              return;
+          }
+          
+          if( ! piece.canDeleteOnInitiativeList() ) {
+              return;
+          }
+          
+          piece.popUpDeleteWindow();
+      }
+      
+      public function editListCharacter():void {
+          var piece:InitiativedPiece = getListCharacter();
+          if( piece == null ) {
+              return;
+          }
+          piece.popUpChangeWindow();
+      }
+      
+      public function refresh():void {
+          Log.loggingTuning("InitiativeWindow.refresh Begin");
+          
+          //編集中なら更新パス
+          if( initiativeInfoListView.itemEditorInstance != null ) {
+              return;
+          }
+          
+          var initiativedPieces:Array = getRoundTimer().getSortedInitiativedPiece();
+          
+          this.clear(getRoundTimer().getCurrentRound(),
+                     getRoundTimer().getCurrentInitiative());
+
+          this.initColumns();
+          
+          var colors:Array = new Array();
+          
+          for(var i:int = 0 ; i < initiativedPieces.length ; i++) {
+              var piece:InitiativedPiece = initiativedPieces[i];
+              Log.logging("piece is ", piece);
+              Log.logging("refreshInitiativeList roundTimer.addCharacter()");
+              
+              var isCurrent:Boolean = ( piece.getInitiative() == getRoundTimer().getCurrentInitiative() );
+              this.addCharacter(piece, isCurrent);
+              if( piece.isDead() ) {
+                  colors.push(0xaaaaaa);
+              } else {
+                  colors.push(defaultColors[i % 2]);
+              }
+          }
+          
+          Log.logging("roundBaseBox.height", roundBaseBox.height);
+          Log.logging("this.height", this.height);
+          
+          initiativeInfoListView.setStyle("alternatingItemColors", colors);
+          initiativeInfoListView.validateNow();
+          setDeleteButtonState();
+          
+          Log.loggingTuning("InitiativeWindow.refresh End");
+      }
+      
+      public function setFontSize(size:int):void {
+          savePosition();
+      }
+      
+      private function getCurrentTargetMarker(piece:InitiativedPiece, isCurrent:Boolean):String {
+          if( ! isCurrent ) {
+              return "";
+          }
+          
+          if(piece.isDead() ) {
+              return "×";
+          }
+          
+          return "●";
+      }
+      
+      private function addCharacter(piece:InitiativedPiece, isCurrent:Boolean):void {
+          Log.logging("addCharacter begin");
+          
+          var characterInfo:Object = new Object();
+          
+          characterInfo["currentTarget"] = getCurrentTargetMarker(piece, isCurrent);
+          characterInfo["initiativeInt"] = Utils.getInitiativeInt(piece.getInitiative());
+          characterInfo["initiativeModify"] = Utils.getInitiativeModify(piece.getInitiative());
+          characterInfo["characterName"] = piece.getName();
+          characterInfo["state"] = piece.getAdditionalInfos().join(", ");
+          characterInfo["info"] = piece.getInfo();
+          characterInfo["character"] = piece;
+          
+          var checkBoxIndex:int = 0;
+          var counterNames:Array = getCounterNames();
+          
+          for(var i:int ; i < counterNames.length ; i++) {
+              var counterName:String = counterNames[i];
+              var count:int = piece.getCounter(counterName);
+              count = getCounterValue(piece, counterName, count);
+              Log.logging("counterName", counterName);
+              Log.logging("count", count);
+              
+              var columnInfo:Object = getColumnInfo(counterName, checkBoxIndex);
+              
+              if( columnInfo.isCheckBox ) {
+                  checkBoxIndex++;
+                  var b:Boolean = (count != 0);
+                  characterInfo["checkBox" + i] = b;
+                  characterInfo["checkBoxEnable" + i] = piece.hasStatus();
+                  characterInfo["checkBoxLabel" + i] = piece.getStatusName(counterName);
+                  characterInfo["columnColor" + i] = columnInfo.color;
+              } else {
+                  characterInfo["counter" + i] = count
+              }
+          }
+          
+          initiativeInfoList.push(characterInfo);
+          
+          piece.setClickEvent( function():void{
+                  selectTargetInfo(characterInfo);
+              });
+          
+          Log.logging("addCharacter end");
+      }
+      
+      public function getCounterValue(piece:InitiativedPiece, counterName:String, count:int):int {
+          Log.logging("count", count);
+          Log.logging("counterName", counterName);
+          
+          var info:Object = getCounterNameInfo(counterName);
+          Log.logging("info", info);
+          
+          var min:int = getCounterLimitMin(piece, info, count);
+          if( count < min ) {
+              count = min;
+          }
+          
+          var max:int = getCounterLimitMax(piece, info, count);
+          Log.logging("max", max);
+          if( count > max ) {
+              count = max;
+          }
+          Log.logging("changed count", count);
+          
+          return count;
+      }
+      
+      static public function getCounterLimitMin(piece:InitiativedPiece, info:Object, count:int):int {
+          var name:String = info["name"];
+          return getCounterLimit(info["min"], piece, (name + getMinValueMarker()), count);
+      }
+      
+      static public function getCounterLimitMax(piece:InitiativedPiece, info:Object, count:int):int {
+          var name:String = info["name"];
+          return getCounterLimit(info["max"], piece, (name + getMaxValueMarker()), count);
+      }
+      
+      static public function getMaxValueMarker():String {
+          return "@MAX";
+      }
+      
+      static public function getMinValueMarker():String {
+          return "@MIN";
+      }
+      
+      static private function getCounterLimit(limitText:String, piece:InitiativedPiece, marker:String, defaultCount:int):int {
+          
+          if ( limitText == null ) {
+              return defaultCount;
+          }
+          
+          var limit:int = parseInt(limitText);
+          if( limitText == "?" ) {
+              if( ! piece.isCounterExist(marker) ) {
+                  return defaultCount;
+              }
+              
+              limit = piece.getCounter(marker);
+          }
+          
+          return limit;
+      }
+      
+      static public function getCounterNameInfo(counterName:String):Object {
+          Log.logging("getCounterNameInfo counterName", counterName);
+          
+          var text:String = counterName;
+          text = text.replace(/＞/g, ">");
+          text = text.replace(/＜/g, "<");
+          text = text.replace(/？/g, "?");
+          var changer:ZenkakuToHankaku = new ZenkakuToHankaku();
+          text = changer.changeOnNumber(text);
+          
+          var result:Object = null;
+          
+          result = /^((-?\d+|\?)>)?([^\<\>]+)(>(-?\d+|\?))?$/.exec(text);
+          Log.logging("result match1", result);
+          if( result != null ) {
+              return {"name": result[3],
+                      "min" : result[5],
+                      "max" : result[2]  };
+          }
+          
+          result = /^((-?\d+|\?)<)?([^\<\>]+)(<(-?\d+|\?))?$/.exec(text);
+          Log.logging("result match2", result);
+          if( result != null ) {
+              return {"name": result[3],
+                      "min" : result[2],
+                      "max" : result[5]  };
+          }
+          
+          Log.logging("NOT match any paturn");
+          return {"name" : counterName};
+      }
+      
+      
+      private function selectTargetInfo(targetInfo:Object):void {
+          for(var i:int = 0 ; i < initiativeInfoList.length ; i++) {
+              var characterInfo:Object = initiativeInfoList[i];
+              
+              if( targetInfo == characterInfo ) {
+                  initiativeInfoListView.selectedIndex = i;
+                  return;
+              }
+          }
+      }
+      
+      private function getCharacterInfoTip(characterInfo:Object):String {
+          var piece:InitiativedPiece = characterInfo["character"];
+          if( piece == null ) {
+              return "";
+          }
+          
+          return piece.getToolTipMessage();
+      }
+      
+      private function getSelectedCharacterInfo():Object {
+          var index:int = initiativeInfoListView.selectedIndex;
+          if(index == -1) {
+              return null;
+          }
+          
+          var characterInfo:Object = initiativeInfoList[index];
+          return characterInfo;
+      }
+      
+      private function getSelectedInitiativedPiece():InitiativedPiece {
+          var characterInfo:Object = getSelectedCharacterInfo();
+          if( characterInfo == null ) {
+              return null;
+          }
+          
+          var piece:InitiativedPiece = characterInfo["character"];
+          return piece;
+      }
+      
+      private var isEditing:Boolean = false;
+      
+      private function doubleclickInitiativeInfoListView():void {
+          
+          if( isEditing ) {
+              return;
+          }
+          
+          var piece:InitiativedPiece = getSelectedInitiativedPiece();
+          if( piece == null ) {
+              return;
+          }
+          
+          piece.pickupToCenter();
+      }
+      
+      private function clickInitiativeInfoListView():void {
+          var piece:InitiativedPiece = getSelectedInitiativedPiece();
+          if( piece == null ) {
+              return;
+          }
+          
+          piece.pickup();
+          setDeleteButtonState();
+      }
+      
+      private function setDeleteButtonState():void {
+          var piece:InitiativedPiece = getSelectedInitiativedPiece();
+          var magicTimer:MagicTimer = piece as MagicTimer;
+          deleteButton.enabled = (magicTimer != null);
+      }
+      
+      public function clear(currentRound:int, currentInitiative:Number):void {
+          this.title = Language.text("initiativeWindowRoundFormat", currentRound, currentInitiative);
+          setAllButtonsStatus(true);
+          
+          initiativeInfoList = new Array();
+      }
+      
+      private static var instance:InitiativeWindow;
+      
+      public static function getInstance():InitiativeWindow {
+          return instance;
+      }
+      
+      
+      override protected function getWindowInfoSaveData(window:IFlexDisplayObject):Object {
+          var info:Object = super.getWindowInfoSaveData(this);
+          
+          info.columnInfos = getColumnInfosFromSaveData();
+          
+          return info;
+      }
+      
+      
+      private function changeColumnWidth(e:DataGridEvent):void{
+          initiativeInfoListView.validateNow();
+          savePosition();
+      }
+      
+      private function getColumnInfosFromSaveData():Object {
+          var columnInfos:Object = new Object();
+          
+          var columns:Array = initiativeInfoListView.columns;
+          for(var i:int = 0 ; i < columns.length ; i++) {
+              var column:DataGridColumn = columns[i];
+              var title:String = column.headerText;
+              if( title == "" ) {
+                  continue;
+              }
+              
+              var data:Object = {
+                  "width" : column.width,
+                  "visible" : column.visible
+              };
+              columnInfos[title] = data;
+          }
+          
+          return columnInfos;
+      }
+      
+      private var columnInfos:Object = null;
+      
+      private function loadColumnInfosAfter():void {
+          initiativeInfoListView.validateNow();
+          
+          if( columnInfos == null ) {
+              return;
+          }
+          
+          var columns:Array = initiativeInfoListView.columns;
+          
+          for(var i:int = 0 ; i < columns.length ; i++) {
+              var column:DataGridColumn = columns[i];
+              
+              var title:String = column.headerText;
+              if( title == "" ) {
+                  continue;
+              }
+              
+              var data:Object = columnInfos[title];
+              if( data == null ) {
+                  continue;
+              }
+              
+              //column.visible = data["visible"];
+              column.width = data["width"];
+          }
+          
+          columnInfos = null;
+          
+          savePosition();
+      }
+      
+      public function setInitPosition():void {
+          setLoadAddAction( loadOthers );
+          
+          if( loadPosition() ) {
+              return;
+          }
+          
+          setInitPositionDefault();
+      }
+      
+      private function loadOthers(info:Object):void {
+          columnInfos = info.columnInfos;
+          Log.logging("loadOthers info.columnInfos", info.columnInfos);
+      }
+      
+      override public function setInitPositionDefault():void {
+          this.width = DodontoF_Main.getInstance().getDiceBox().width;
+          
+          var screenWidth:int = DodontoF_Main.getInstance().getScreenWidth();
+          var screenHeigth:int = DodontoF_Main.getInstance().getScreenHeight();
+          var diceBoxHeigth:int = DodontoF_Main.getInstance().getDiceBox().height;
+          var heightPadding:int = 10;
+          
+          if( diceBoxHeigth == 0 ) {
+              heightPadding = 0;
+          }
+          
+          this.x = screenWidth - this.width;
+          this.y = DodontoF_Main.getInstance().getDodontoF().getMainBarHeight();
+          this.height = screenHeigth - diceBoxHeigth - heightPadding - this.y;
+          
+          super.setInitPositionDefault();
+      }
+      
+      private function setAllButtonsStatus(isEnable:Boolean):void {
+          resetButton.enabled = isEnable;
+          nextButton.enabled = isEnable;
+          
+          if( getRoundTimer().getHistoryCount() == 0 ) {
+              prevButton.enabled = false;
+          } else {
+              prevButton.enabled = isEnable;
+          }
+      }
+
+      private function previous():void {
+          setAllButtonsStatus(false);
+          getRoundTimer().previous();
+      }
+
+      private function next():void {
+          setAllButtonsStatus(false);
+          getRoundTimer().next();
+      }
+      
+      public function setConfig():void {
+          var window:SetInitiativeInfoWindow = DodontoF.popup(SetInitiativeInfoWindow, false) as SetInitiativeInfoWindow;
+          window.init(getCounterNames().join(" "));
+      }
+      
+      private function reset():void {
+          setAllButtonsStatus(false);
+          getRoundTimer().reset();
+      }
+      
+      private function initiativeInfoListItemEditBegin(event:DataGridEvent):void {
+          isEditing = true;
+      }
+      
+      private function initiativeInfoListItemEditEndFunction(event:DataGridEvent):void {
+          Log.logging("initiativeInfoListItemEditEndFunction called.");
+          
+          isEditing = false;
+          
+          //キャンセル操作（ESCキーでのキャンセル）なら送信しないようチェック
+          if( event.reason == mx.events.DataGridEventReason.CANCELLED ) {
+              return;
+          }
+          
+          sendCharacterInfo(event);
+          
+          //次回のリフレッシュで必ず値を更新するように更新時刻を0にリセット
+          //DodontoF_Main.getInstance().getGuiInputSender().getSender().resetLastUpdateTimeOfInitiativeTimer();
+      }
+      
+      private function sendCharacterInfo(event:DataGridEvent):void {
+          Log.logging("sendCharacterInfo called.");
+          
+          var characterInfo:Object = initiativeInfoList[event.rowIndex];
+          if( characterInfo == null ) {
+              return;
+          }
+          
+          var piece:InitiativedPiece = characterInfo["character"];
+          var changed:Boolean = false;
+          
+          if( setInitiative(event, characterInfo, piece) ) {
+              changed = true;
+          }
+          
+          if( setCounter(event, characterInfo, piece) ) {
+              changed = true;
+          }
+          
+          if( setCheckBox(event, characterInfo, piece) ) {
+              changed = true;
+          }
+          
+          if( event.dataField == "info" ) {
+              var editor:InitiativeWindowEditor = InitiativeWindowEditor(event.currentTarget.itemEditorInstance);
+              var info:String = editor.text;
+              Log.logging("info", info);
+              if( info != piece.getInfo() ) {
+                  piece.setInfo( info );
+                  changed = true;
+              }
+          }
+          
+          Log.loggingTuning("changed", changed);
+          if( changed ) {
+              piece.updateRefresh();
+              DodontoF_Main.getInstance().getGuiInputSender().getSender().changeCharacter( piece.getJsonData() );
+          }
+      }
+      
+      private function setCounter(event:DataGridEvent, characterInfo:Object, piece:InitiativedPiece):Boolean {
+          var counterHeaderName:String = event.dataField;
+          
+          var matchResult:Object = /^counter(\d+)/.exec(counterHeaderName);
+          if( matchResult == null ) {
+              return false;
+          }
+          
+          var counterIndex:int = parseInt(matchResult[1]);
+          var count:int = characterInfo[counterHeaderName];
+          
+          var stepper:NumericStepper = NumericStepper(event.currentTarget.itemEditorInstance);
+          var newCount:int = stepper.value;
+          
+          var counterNames:Array = getCounterNames();
+          var counterName:String = counterNames[counterIndex];
+          
+          Log.logging("newCount", newCount);
+          piece.setCounter(counterName, newCount);
+          
+          return true;
+      }
+      
+      private function setCheckBox(event:DataGridEvent, characterInfo:Object, piece:InitiativedPiece):Boolean {
+          var checkBoxHeaderName:String = event.dataField;
+          
+          var matchResult:Object = /^checkBox(\d+)/.exec(checkBoxHeaderName);
+          if( matchResult == null ) {
+              return false;
+          }
+          
+          var checkBoxIndex:int = parseInt(matchResult[1]);
+          var checked:Boolean = characterInfo[checkBoxHeaderName];
+          
+          var checkBox:CheckBox = CheckBox(event.currentTarget.itemEditorInstance);
+          var newChecked:Boolean = checkBox.selected;
+          
+          if( newChecked == checked ) {
+              return false;
+          }
+          
+          var counterNames:Array = getCounterNames();
+          var counterName:String = counterNames[checkBoxIndex];
+          var newCount:int = (newChecked ? 1 : 0);
+          piece.setCounter(counterName, newCount);
+          
+          return true;
+      }
+      
+      private function setInitiative(event:DataGridEvent, characterInfo:Object, piece:InitiativedPiece):Boolean {
+          if( (event.dataField != "initiativeInt") &&
+              (event.dataField != "initiativeModify") ) {
+              return false;
+          }
+          
+          var initiativeInt:int = characterInfo["initiativeInt"];
+          var initiativeModify:int = characterInfo["initiativeModify"];
+          
+          var stepper:NumericStepper = NumericStepper(event.currentTarget.itemEditorInstance);
+          if(event.dataField == "initiativeInt") {
+              initiativeInt = stepper.value;
+          }
+          if(event.dataField == "initiativeModify") {
+              initiativeModify = stepper.value;
+          }
+          
+          var initiative:Number = Utils.getInitiative(initiativeInt, initiativeModify);
+          
+          if( initiative == piece.getInitiative() ) {
+              return false;
+          }
+          
+          piece.setInitiative( initiative );
+          return true;
+      }
+      
+    ]]>
+  </mx:Script>
+
+</torgtaitai:ResizableWindow>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:ResizableWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*"
+   title="{Language.s.cardPickup}"
+   showCloseButton="false"
+   backgroundColor="#FFFFFF"
+   borderStyle="solid"
+   backgroundAlpha="0.5"
+   >
+  
+  <mx:Script>
+    <![CDATA[
+        //
+        private var cardPickUp:CardPickUp = null;
+        
+        private var thisObj:CardPickUpWindow;
+        
+        override public function setup():void {
+            thisObj = this;
+            
+            setInitPositionDefault();
+            
+            cardPickUp = new CardPickUp(Card.getJsonData("", "", 0, 0));
+            
+            cardPickUp.getView().visible = false;
+            cardPickUp.setTitleVisible( false );
+            
+            this.titleBar.addChild(cardPickUp.getView());
+            
+            titleTextField.textColor = 0;
+            
+            loadPosition();
+            this.height = resizerMinHeigth();
+            
+            setResizeEventFunction( function():void { setCardPickUpPosition() });
+            
+            initEvent();
+        }
+        
+        protected function initEvent():void {
+            addEventListener(MouseEvent.MOUSE_OUT, function(event:MouseEvent):void {
+                    thisObj.hideCardPickUp();
+                });
+        }
+        
+        override public function getSaveInfoKeyName():String {
+            return "CardPickUpWindow";
+        }
+        
+        override protected function resizerMinWidth():int {
+            return 10;
+        }
+        
+        override protected function resizerMinHeigth():int {
+            return 20;
+        }
+        
+        override public function isVerticalResizable():Boolean {
+            return false;
+        }
+        
+        public function displayCardPickUp(card:Card):void {
+            if( card == cardPickUp ) {
+                cardPickUp.getView().visible = true;
+                return;
+            }
+            
+            cardPickUp.setCard( card );
+            setCardPickUpPosition();
+            
+            cardPickUp.getView().visible = true;
+        }
+        
+        public function hideCardPickUp():void {
+            cardPickUp.getView().visible = false;
+        }
+        
+        public function setCardPickUpPosition():void {
+            var cardView:Sprite = cardPickUp.getView();
+            
+            var cardWidth:int = cardPickUp.getWidth() * Map.getSquareLength();
+            var windowWidth:int = this.width - 15;
+            var rate:Number = (windowWidth / cardWidth);
+            
+            cardPickUp.setRate(rate);
+            
+            cardView.x = 10;
+            cardView.y = 20 + 3 * rate;
+        }
+        
+        override public function setInitPositionDefault():void {
+            this.x = 10;
+            this.y = 40
+            width = 200;
+            height = 20;
+        }
+        
+    ]]>
+  </mx:Script>
+  
+</torgtaitai:ResizableWindow>

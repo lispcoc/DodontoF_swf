@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="400"
+   height="220"
+   title="{Language.s.easyFileUploader}" 
+   showCloseButton="true"
+   >
+  
+  <mx:Text text="{Language.s.easyFileUploaderInfo_1}" />
+  <mx:Text text="{Language.s.easyFileUploaderInfo_2}" />
+  <mx:Text text="{Language.s.easyFileUploaderInfo_3}" />
+  <mx:Text text="{Language.s.easyFileUploaderInfo_4}" />
+  
+  <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button id="uploadButton" enabled="true" label="{Language.s.executeFileUpload}" click="uploadFile()" />
+    <mx:Button label="{Language.s.closeButton}" click="PopUpManager.removePopUp(this)" />
+  </mx:HBox>
+  
+  <mx:HBox  height="25" width="100%" horizontalAlign="center" verticalAlign="middle" >
+    <mx:Label text="{Language.s.executeFileUploadResult}" />
+    <mx:Label id="result" width="100%" text="" fontWeight="bold" />
+  </mx:HBox>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.managers.PopUpManager;
+    import mx.controls.Label;
+    import mx.controls.Alert;
+    import mx.collections.ArrayCollection;
+    
+    
+    override protected function setup():void {
+    }
+    
+    private var fileReferenceForUpload:FileReference = null;
+    
+    private function uploadFile():void {
+        
+        if( fileReferenceForUpload == null ) {
+            fileReferenceForUpload  = new FileReference();
+            fileReferenceForUpload.addEventListener(Event.SELECT, fileSelectHandler);
+        }
+        
+        var data:Array = [[Language.s.allUploadableFileTypes, "*.jpg;*.jpeg;*.gif;*.png;*.bmp;*.pdf;*.doc;*.txt;*.html;*.htm;*.xls;*.rtf;*.zip;*.lzh;*.rar;*.swf;*.flv;*.avi;*.mp4;*.mp3;*.wmv;*.wav;*.cpd;*.sav;*.rec"],
+                          [Language.s.imageFileType, "*.jpg;*.jpeg;*.gif;*.png;*.bmp"],
+                          [Language.s.textFileType, "*.pdf;*.doc;*.txt;*.html;*.htm;*.xls;*.rtf"],
+                          [Language.s.compressedFileType, "*.zip;*.lzh;*.rar"],
+                          [Language.s.movieSoundFileType, "*.swf;*.flv;*.avi;*.mp4;*.mp3;*.wmv;*.wav"],
+                          [Language.s.oterFileType, "*.cpd;*.sav;*.rec"]];
+                          
+        
+        var filters:Array = new Array();
+        for(var i:int = 0 ; i < data.length ; i++) {
+            var types:String = data[i][1];
+            var name:String = data[i][0] + "(" + types + ")";
+            var filter:FileFilter = new FileFilter(name, types);
+            filters.push( filter );
+        }
+        fileReferenceForUpload.browse(filters);
+    }
+    
+    private function fileSelectHandler(event:Event):void {
+        uploadButton.enabled = false;
+        
+        result.text = Language.s.uploading;
+        
+        var params:Object = {
+            'baseUrl' : Utils.getOwnBaseUrl()
+        };
+        
+        var sender:SharedDataSender = DodontoF_Main.getInstance().getGuiInputSender().getSender();
+        sender.sendFileBytesUpload(fileReferenceForUpload, "uploadFile", params, uploadImageFileResult);
+    }
+    
+    public function uploadImageFileResult(dataEvent:Object):void {
+        Log.loggingTuning("=>uploadImageFileResult(event:Event) Begin");
+        try {
+            uploadButton.enabled = true;
+            
+            var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(dataEvent);
+            Log.loggingTuning("jsonData", jsonData);
+            
+            result.text = Language.getKeywordText( jsonData.resultText );
+            
+            if( result.text == "OK") {
+                var fileName:String = jsonData.uploadFileInfo.fileName;
+                var url:String = jsonData.uploadFileInfo.fileUploadUrl;
+                Utils.sendSystemMessage(
+                    Language.s.executeFileUploadInishedMessage,
+                    [fileName, url]);
+                
+                PopUpManager.removePopUp(this);
+            }
+        } catch(e:Error) {
+            Log.loggingError("exception : " + e);
+            result.text = "exception : " + e;
+        }
+        Log.loggingTuning("=>uploadImageFileResult(event:Event) End");
+    }
+        
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

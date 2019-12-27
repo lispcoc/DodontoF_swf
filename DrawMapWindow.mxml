@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   x="220"
+   y="250"
+   width="300"
+   height="200"
+   creationComplete="setup()"
+   >
+  
+  <mx:HBox id="penBox" width="100%">
+    <mx:Button id="pencil"
+               icon="{pencilIcon}"
+               click="setMapDrawMode(pencilMode)"
+               toolTip="{Language.s.handPaintTips}"
+               toggle="true"
+               selected="true"
+               verticalGap="0"
+               horizontalGap="0"
+               width="25"
+               />
+    
+    <mx:Button id="eraser"
+               icon="{eraserIcon}"
+               click="setMapDrawMode(eraserMode)"
+               toggle="true"
+               width="25"
+               />
+      
+    <mx:Spacer width="10" />
+	<mx:Label text="{Language.s.handPaintColor}" />
+    <mx:ColorPicker id="colorPicker" showTextField="true" selectedColor="0x000000" change="setDrawState()"/>
+    
+    <mx:Spacer width="100%" />
+
+    <mx:Button id="undo"
+               toolTip="{Language.s.handPaintUndo}"
+               icon="{undoIcon}"
+               click="undoDrawOnMap()"
+               width="25"
+               />
+      
+    <mx:Button id="redo"
+               toolTip="{Language.s.handPaintRedo}"
+               icon="{redoIcon}"
+               click="redoDrawOnMap()"
+               width="25"
+               />
+    
+    <mx:Spacer width="10" />
+  </mx:HBox>
+  
+  <mx:Spacer height="10" />
+  
+  <mx:HBox id="lineWeightBox" width="100%" >
+    <mx:Label text="{Language.s.handLineWeight}" />
+    <mx:HSlider id="lineWeight" 
+                width="200"
+                showTrackHighlight="true"
+                minimum="1" maximum="200" value="3"
+                snapInterval="1"
+                tickInterval="50"
+                change="setLineWeight(lineWeight.value)" />
+  </mx:HBox>
+  <mx:NumericStepper id="lineWeightStep"
+                     minimum="1" maximum="200" value="3"
+                     change="setLineWeight(lineWeightStep.value)" />
+  
+  <mx:Spacer height="15" />
+  
+  <mx:HBox width="100%">
+    <mx:ProgressBar id="lineCounter"
+                    width="100%" height="20"
+                    indeterminate="false"
+                    mode="manual"
+                    label="%1"
+                    />
+    
+    <mx:Button id="clearDraw"
+               label="{Language.s.handPaintDeleteAll}"
+               click="clearDrawOnMap()"
+               />
+  </mx:HBox>
+  
+  <mx:Script>
+    <![CDATA[
+     
+    [Embed(source='image/icons/pencil.gif')]
+    [Bindable]
+    public static var pencilIcon:Class;
+    
+    [Embed(source='image/icons/line.gif')]
+    [Bindable]
+    public static var lineIcon:Class;
+    
+    [Embed(source='image/icons/eraser.gif')]
+    [Bindable]
+    private static var eraserIcon:Class;
+    
+    [Embed(source='image/icons/arrow_undo.png')]
+    [Bindable]
+    private static var undoIcon:Class;
+    
+    [Embed(source='image/icons/arrow_redo.png')]
+    [Bindable]
+    private static var redoIcon:Class;
+    
+	import mx.managers.CursorManager;
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.events.FlexEvent;
+    
+    static private var thisObj:DrawMapWindow;
+    static private var parentButton:Button;
+    
+    private var pencilLineWeight:int = 3;
+    private var eraserLineWeight:int = 3;
+    static private var lineCountLimit:int = 3000;
+    static private var totalLineCount:int = 0;
+    
+    static public function setLineCountLimit(count:int):void {
+        lineCountLimit = count;
+    }
+    
+    static public function setLineCount(count:int):void {
+        totalLineCount = count;
+        
+        if( thisObj != null ) {
+            thisObj.setLineCountLocal();
+        }
+    }
+    
+    static public function getInstance():DrawMapWindow {
+        return thisObj;
+    }
+    
+    public function setLineCountLocal():void {
+        lineCounter.setProgress(totalLineCount, lineCountLimit);
+        printLineCounterLabel();
+        
+        checkLimit();
+    }
+    
+    private function printLineCounterLabel():void {
+        var message:String = "";
+
+        var percent:int = (100 * totalLineCount / lineCountLimit);
+        if( percent > 100 ) {
+            message +=Language.s.handPaintDrawTooMuch;
+        } else if( percent > 60 ) {
+            message +=Language.s.handPaintDrawMuch;
+        } else if( percent > 30 ) {
+            message +=Language.s.handPaintDrawMuchNomal;
+        } else {
+            message +=Language.s.handPaintDrawMuchLittle;
+        }
+        
+        message += Language.s.handPaintDrawPointPercent;
+        lineCounter.label = message;
+    }
+    
+    static public function open(button:Button):void {
+        parentButton = button;
+        
+        if( thisObj == null ) {
+            thisObj = DodontoF.popup(DrawMapWindow, true) as DrawMapWindow;
+            thisObj.setEvents();
+        }
+        
+        var isDrawMode:Boolean = button.selected;
+        thisObj.openLocal(isDrawMode);
+    }
+    
+    private function openLocal(isDrawMode:Boolean):void {
+        if( ! checkLimit() ) {
+            return;
+        }
+        
+        setDrawMode(isDrawMode);
+    }
+    
+    static public function setDrawMode(isDrawMode:Boolean):void {
+        thisObj.visible = isDrawMode;
+        setDrawModeLocal(isDrawMode);
+    }
+    
+    static private function setDrawModeLocal(isDrawMode:Boolean):void {
+        getMap().setDrawMode( isDrawMode );
+        
+        if( isDrawMode ) {
+            init();
+        } else {
+            thisObj.changeCursor( false );
+        }
+    }
+    
+    private function setEvents():void {
+        thisObj.addEventListener(MouseEvent.ROLL_OUT, rollOutFromWindow);
+        getMap().getOverMapLayer().addEventListener(MouseEvent.ROLL_OVER, rollOutFromWindow);
+        
+        parentButton.addEventListener(MouseEvent.ROLL_OVER, rollOverToWindow);
+    }
+    
+    private function rollOutFromWindow(event:MouseEvent):void {
+        thisObj.visible = false;
+        thisObj.changeCursor( true );
+    }
+    
+    private function rollOverToWindow(event:MouseEvent):void {
+        if( parentButton.selected ) {
+            thisObj.changeCursor( false );
+            thisObj.visible = true;
+        }
+    }
+    
+    override protected function startDragging(event:MouseEvent):void {
+        //ドラッグを許可しない！
+    }
+    
+    protected function setup():void {
+        this.opaqueBackground = 0xEFEEEF;
+        this.x = parentButton.x + 10;
+        this.y = parentButton.y + parentButton.height + 7;
+        this.lineCounter.minimum = 0;
+        this.lineCounter.maximum = lineCountLimit;
+        
+        colorPicker.selectedColor = ChatWindow.getInstance().getChatFontColorValue();
+        init();
+    }
+    
+    private var eraserMode:int = 0;
+    private var pencilMode:int = 1;
+    private var lineMode:int = 2;
+    
+    private function init():void {
+        setMapDrawMode(pencilMode);
+        setLineCountLocal();
+    }
+    
+    private function setLineWeight(value:int):void {
+        lineWeightStep.value = value;
+        lineWeight.value = value;
+        
+        if( isPencilMode() ) {
+            pencilLineWeight = lineWeight.value;
+        } else {
+            eraserLineWeight = lineWeight.value;
+        }
+        
+        setDrawState();
+    }
+    
+    private function setMapDrawMode(mode:int):void {
+        eraser.selected = (mode == eraserMode);
+        pencil.selected = (mode == pencilMode);
+        
+        lineWeight.value = ( mode == eraserMode ? eraserLineWeight  : pencilLineWeight );
+        lineWeightStep.value = lineWeight.value;
+        
+        setDrawState();
+    }
+    
+    private function checkLimit():Boolean {
+        if (totalLineCount <= lineCountLimit) {
+            blockBoxes(true);
+            return true;
+        }
+        
+        blockBoxes(false);
+        blockDraw();
+        return false;
+    }
+    
+    private function blockBoxes(b:Boolean):void {
+        penBox.enabled = b;
+        lineWeightBox.enabled = b;
+        lineWeightStep.enabled = b;
+    }
+    
+    private function blockDraw():void {
+        lineCounter.label = Language.s.handPaintDrawTooMuchWarning;
+        setDrawModeLocal(false);
+    }
+    
+    private function isPencilMode():Boolean {
+        return pencil.selected;
+    }
+    
+    private function changeCursor(isChanged:Boolean):void {
+        CursorManager.removeCursor(CursorManager.currentCursorID);
+        
+        if( ! isChanged ) {
+            return;
+        }
+        
+        var isDrawMode:Boolean = getMap().getDrawMode();
+        if( ! isDrawMode ) {
+            return;
+        }
+        
+        var cursor:Class = null;
+        var offX:Number = 0;
+        var offY:Number = 0;
+        
+        if( isPencilMode() ) {
+            cursor = pencilIcon;
+            offX = 0;
+            offY = -13;
+        } else {
+            cursor = eraserIcon;
+            offX = 0
+            offY = -11;
+        }
+        
+        
+        if( cursor != null ) {
+            CursorManager.setCursor(cursor, 2, offX, offY);
+        }
+    }
+    
+    private function setDrawState():void {
+        getMap().setDrawState(lineWeight.value, colorPicker.selectedColor, eraser.selected, false);
+    }
+    
+    
+    static private var redoDataList:Array = new Array();
+    
+    static public function clearRedoList():void {
+        redoDataList = new Array();
+    }
+    
+    public function undoDrawOnMap():void {
+        getMap().undoDrawOnMap( getUndoResult );
+    }
+    
+    private function getUndoResult(obj:Object):void {
+        var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(obj);
+        
+        var data:Array = jsonData.data as Array;
+        if( data == null ) {
+            return;
+        }
+        
+        redoDataList.push(data);
+    }
+    
+    public function redoDrawOnMap():void {
+        var data:Array = redoDataList.pop();
+        if( data == null ) {
+            return;
+        }
+        
+        DodontoF_Main.getInstance().getGuiInputSender().drawOnMap( data );
+    }
+    
+    
+    static private function getMap():Map {
+        return DodontoF_Main.getInstance().getMap();
+    }
+    
+    private function clearDrawOnMap():void {
+        Utils.askByAlert(Language.s.deleteHandPaint,
+                         Language.s.deleteHandPaintQuestion,
+                         function():void {
+                             DodontoF_Main.getInstance().getGuiInputSender().clearDrawOnMap();
+                             parentButton.selected = false;
+                             open(parentButton);
+                         }
+                         );
+    }
+    
+    
+        ]]>
+  </mx:Script>
+  
+</mx:TitleWindow>

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="430" height="200"
+   title="{Language.s.retrySendFailedMessage}" 
+   showCloseButton="true"
+   >
+  
+  <mx:Box height="100%" width="100%">
+	<mx:DataGrid id="list"
+                 width="100%"
+                 height="100%"
+                 showHeaders="false"
+                 dataProvider="{listData}"
+                 editable="false"
+                 allowMultipleSelection="false"
+                 doubleClickEnabled="true"
+                 doubleClick="sendMessage()"
+                 >
+	  <mx:columns>
+
+        <mx:DataGridColumn id="deleteButtonColumn"
+                           headerText="deleteButton"
+                           textAlign="center"
+      	                   minWidth="20"
+                           width="20"
+                           >
+          <mx:itemRenderer>
+            <mx:Component>
+              <mx:Image source="{SendChatMessageFailedWindow.deleteIcon}" click="SendChatMessageFailedWindow.deleteMessage()" />
+            </mx:Component>
+          </mx:itemRenderer>
+        </mx:DataGridColumn>
+      
+		<mx:DataGridColumn headerText="Failed Data"
+                           dataField="text"
+                           />
+      
+        <mx:DataGridColumn id="sendButtonColumn"
+                           headerText="sendButton"
+                           textAlign="center"
+      	                   minWidth="90"
+                           width="90"
+                           >
+          <mx:itemRenderer>
+            <mx:Component>
+              <mx:Button label="{Language.s.resend}" click="SendChatMessageFailedWindow.sendMessage()" />
+            </mx:Component>
+          </mx:itemRenderer>
+        </mx:DataGridColumn>
+      
+      </mx:columns>
+    </mx:DataGrid>
+  </mx:Box>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.managers.PopUpManager;
+    import mx.collections.ArrayCollection;
+    import mx.core.UIComponent;
+    
+
+    [Embed(source='image/icons/cancel.png')]
+    [Bindable]
+    public static var deleteIcon:Class;
+    
+    [Bindable]
+    private var listData:ArrayCollection = new ArrayCollection();
+    
+    static private var self:SendChatMessageFailedWindow = null;
+    
+    override protected function setup():void {
+        
+    }
+
+    static public function setData(data:ChatSendData):void {
+        if( self == null ) {
+            self = DodontoF.popup(SendChatMessageFailedWindow, false) as SendChatMessageFailedWindow;
+            setWindowVisible( false );
+        }
+        
+        self.setData(data);
+        setNotify(true);
+    }
+    
+    static public function setNotify(b:Boolean):void {
+        Log.logging("setNotify Begin");
+        DodontoF_Main.getInstance().getChatWindow().setSendErrorNotifyButtonEnable(b);
+        
+        if ( b ) {
+            Log.logging("setNotify message");
+            Log.loggingErrorOnStatus( Language.text("sendChatErrorCountMessage", self.listData.length) );
+        }
+        Log.logging("setNotify End");
+    }
+    
+    static public function setWindowVisible(b:Boolean):void {
+        Log.logging("setWindowVisible b", b);
+        
+        self.visible = b;
+    }
+    
+    
+    static public function deleteMessage():void {
+        self.deleteMessage();
+    }
+    
+    public function deleteMessage():void {
+        
+        var index:int = list.selectedIndex;
+        var obj:Object = listData.removeItemAt(index);
+    }
+    
+    
+    static public function sendMessage():void {
+        self.sendMessage();
+    }
+    
+    public function sendMessage():void {
+        
+        var index:int = list.selectedIndex;
+        var obj:Object = listData.removeItemAt(index);
+        
+        var data:ChatSendData = obj.data;
+        if( data == null ) {
+            return;
+        }
+        
+        DodontoF_Main.getInstance().getChatWindow().sendChatMessageAgain(data);
+        
+        if( listData.length == 0 ) {
+            setNotify(false);
+            closeAction();
+        }
+    }
+    
+    public function setData(data:ChatSendData):void {
+        var obj:Object = new Object();
+        obj.data = data;
+        obj.text = data.getMessage();
+        
+        listData.addItem(obj);
+    }
+    
+    override protected function closeAction():void {
+        Log.logging("closeAction Begin");
+        
+        Log.loggingErrorOnStatus("");
+        setWindowVisible( false );
+        Log.logging("closeAction End");
+    }
+    
+    
+    ]]>
+  </mx:Script>
+  
+</torgtaitai:CommonPopupWindow>

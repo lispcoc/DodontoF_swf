@@ -1,0 +1,2223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:ResizableWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*"
+   title="{Language.s.chatWindowTitle}"
+   width="220"
+   height="220"
+   showCloseButton="true"
+   rollOver="changeLogVisible(event, true)"
+   >
+<!--
+   rollOut="changeLogVisible(event, false)"
+-->
+  
+  <mx:Box height="100%" width="100%"
+                    paddingTop="0"
+                    paddingBottom="0" 
+          >
+    
+    <mx:VDividedBox id="chatMessageLogBoxDivder" width="100%" height="100%" mouseDown="blockEvent(event)"
+                    paddingTop="0"
+                    paddingBottom="0" 
+                    >
+      
+      <mx:TabNavigator id="chatMessageLogBoxTab" width="100%" height="100%"
+                       paddingTop="0"
+                       paddingBottom="0" 
+                       change="changeChannel()"
+                       >
+      </mx:TabNavigator>
+      
+      <mx:Box id="chatControlBox" width="100%" height="{Config.fontSize + 65}" verticalGap="1" >
+        <mx:HBox id="nameBox" width="100%" height="{Config.fontSize + 15}">
+	      <mx:Label text="{Language.s.chatWindowSenderName}"/>
+          <torgtaitai:SuggestComboBox id="chatCharacterName" 
+                       change="changedChatCharacterName()"
+                       tabIndex="1"
+                       width="100%"
+                       minWidth="0"
+                       rowCount="10"
+                       />
+          
+          <mx:ComboBox id="standingGraphicsStates"
+                       tabIndex="2"
+                       rowCount="10"
+                       />
+          
+          <mx:Image id="secretTalkButton" source="{keyIcon}"
+                    click="visibleSecretTalk()"
+                    toolTip="{Language.s.secretTalkButtonToolTip}"
+                    />
+          <mx:ComboBox id="sendtoBox"
+                       toolTip="{Language.s.sendChatToButtonToolTip}"
+                       change="changeSendtoBox()"
+                       rowCount="10"
+                       visible="false"
+                       width="0"
+                       />
+          
+          <mx:HBox width="100%" height="100%">
+            
+            <mx:HBox id="diceBotGameTypeBox" height="200">
+              <mx:ComboBox id="diceBotGameType"
+                           labelField="name"
+                           toolTip="{diceBotHelpText}"
+                           change="changeDiceBotGameType();"
+                           rowCount="10"
+                           >
+              </mx:ComboBox>
+              
+              <mx:Image id="diceBotHelpButton" source="{diceBotHelpIcon}" click="openDiceBotHelp()"
+                        toolTip="{Language.s.openDiceBotHelpTips}"
+                        />
+
+              <mx:Image id="botTableButton" source="{botTableIcon}" click="manageDiceBotTable()"
+                        toolTip="{Language.s.botTableTips}"
+                        />
+
+              <mx:Image id="novelticModeButton" source="{novelticModeIcon}" click="changeNovelticMode()" />
+              <mx:CheckBox id="isHideNovelticWindow" label="{Language.s.hiddenLogAuto}" fontSize="10"
+                           toolTip="{Language.s.novelticModeTips}"
+                           width="0" selected="true" visible="false" />
+              <mx:Image id="deleteChatLogButton" source="{deleteChatLogIcon}" click="deleteChatLog()" toolTip="{Language.s.deleteAllChatLog}" />
+              <mx:Image id="chatFontSetButton" source="{chatFontIcon}" click="setChatFontWindow()" toolTip="{Language.s.chatFontConfig}" />
+              <mx:Image id="soundStatusImage" click="changeSoundState()" />
+              <mx:Image id="voteImage" source="{voteIcon}" click="chatMessageTrader.vote()" toolTip="{Language.s.rollCallAndVote}" />
+              <mx:Image id="sendSoundButton" click="sendOrStopSound()"  />
+              <mx:Image source="{cutInIcon}" click="openCreateCutInWindow()" toolTip="{Language.s.cutInSetting}" />
+              <mx:Image source="{standingGraphicsEditIcon}" click="openCreateStandingGraphicsWindow()"  toolTip="{Language.s.standingImageConfig}" />
+              <mx:Image source="{fileUploadIcon}" click="uploadFile()" toolTip="{Language.s.easyFileUploader}" />
+              <mx:Image id="talkButton" source="{talkSilentIcon}" click="setTalkMode()"  visible="{canTalk}" />
+      
+            </mx:HBox>
+          </mx:HBox>
+          
+        </mx:HBox>
+        
+        <mx:Box width="100%" height="100%">
+          
+          <mx:HBox width="100%" height="100%">
+	        <mx:Label text="{Language.s.chatMessageLabel}"/>
+            <mx:HBox id="chatMessageBase" width="100%" height="100%">
+              <mx:TextArea id="chatMessageInput" width="100%" height="100%" text=""
+                           keyDown="keyDownInChatMessage(event)"
+                           keyUp="keyUpInChatMessage(event)"
+                           tabIndex="3"
+                           />
+              <mx:Label id="sendToCharacters" width="0" height="100%" text=""
+                           visible="false"
+                           />
+            </mx:HBox>
+            
+            
+            <mx:Box id="sendCounterRemocon" width="60" height="100%" horizontalAlign="center" verticalAlign="middle">
+              <mx:Button id="sendMessageButton" label="{Language.s.sendChatMessage}" height="18" width="60" click="sendChatMessageLocal()" />
+              <mx:Button label="{Language.s.saveChatLog}" height="18" width="60" click="saveChatLog()" paddingLeft="2" paddingRight="2" />
+            </mx:Box>
+            
+          </mx:HBox>
+          
+        </mx:Box>
+      </mx:Box>
+      
+    </mx:VDividedBox>
+  </mx:Box>
+  
+  <mx:Glow id="glowEffectForChatError"
+           duration="500" repeatCount="3"
+           alphaFrom="1.0" alphaTo="0.0" 
+           blurXFrom="20.0" blurXTo="70.0" 
+           blurYFrom="20.0" blurYTo="70.0" 
+           color="0xFF0000"/>
+  
+  <mx:Style>
+.nocheckTabStyle { fill-colors: #FFF04B, #FFFFCC; }
+
+.maximizeRestoreButtonStyle
+{
+	up-skin:        	Embed("/image/icons/maximize_up.png");
+	over-skin:      	Embed("/image/icons/maximize_over.png");
+	down-skin:      	Embed("/image/icons/maximize_up.png");
+	selected-up-skin:   Embed("/image/icons/restore_up.png");
+	selected-over-skin: Embed("/image/icons/restore_over.png");
+	selected-down-skin: Embed("/image/icons/restore_up.png");
+}
+
+  </mx:Style> 
+
+  <mx:Script>
+    <![CDATA[
+
+        [Embed(source='image/icons/icon_help.png')]
+        [Bindable]
+        private static var diceBotHelpIcon:Class;
+        
+        [Embed(source='image/icons/page_white_gear.png')]
+        [Bindable]
+        private static var botTableIcon:Class;
+        
+        [Embed(source='image/icons/page_white_get.png')]
+        [Bindable]
+        private static var fileUploadIcon:Class;
+    
+        [Embed(source='image/icons/good.jpg')]
+        [Bindable]
+        private static var goodIcon:Class;
+    
+        [Embed(source='image/icons/key.png')]
+        [Bindable]
+        private static var keyIcon:Class;
+    
+        [Embed(source='image/icons/sound.png')]
+        [Bindable]
+        private static var soundOnIcon:Class;
+    
+        [Embed(source='image/icons/page_white_delete.png')]
+        [Bindable]
+        private static var deleteChatLogIcon:Class;
+    
+        [Embed(source='image/icons/font.png')]
+        [Bindable]
+        private static var chatFontIcon:Class;
+    
+        [Embed(source='image/icons/sound_mute.png')]
+        [Bindable]
+        private static var soundOffIcon:Class;
+    
+        [Embed(source='image/icons/bell.png')]
+        [Bindable]
+        private static var sendSoundIcon:Class;
+        
+        [Embed(source='image/icons/cancel.png')]
+        [Bindable]
+        private static var stopSoundIcon:Class;
+    
+        [Embed(source='image/icons/film.png')]
+        [Bindable]
+        private static var cutInIcon:Class;
+        
+        [Embed(source='image/icons/user_comment.png')]
+        [Bindable]
+        private static var voteIcon:Class;
+
+        [Embed(source='image/icons/user_edit.png')]
+        [Bindable]
+        private static var standingGraphicsEditIcon:Class;
+        
+        [Embed(source='image/icons/book_open.png')]
+        [Bindable]
+        private static var novelticModeIcon:Class;
+        
+        [Embed(source='image/icons/emoticon_grin.png')]
+        [Bindable]
+        public static var talkIcon:Class;
+        
+        [Embed(source='image/icons/emoticon_smile.png')]
+        [Bindable]
+        private static var talkSilentIcon:Class;
+        
+        [Embed(source='image/icons/comment_delete.png')]
+        [Bindable]
+        private static var sendChatMessageErrorIcon:Class;
+        
+        [Bindable]
+        public var diceBotHelpText:String;
+        
+        [Bindable]
+        static private var canTalk:Boolean = false;
+        
+        
+        import flash.events.Event;
+        import flash.net.URLRequest;
+        import mx.containers.dividedBoxClasses.BoxDivider;
+        import mx.controls.Alert;
+        import mx.controls.Menu;
+        import mx.controls.Spacer;
+        import mx.controls.Text;
+        import mx.core.Application;
+        import mx.core.UIComponent;
+        import mx.core.UIComponentCachePolicy;
+        import mx.events.CloseEvent;
+        import mx.events.FlexEvent;
+        import mx.events.MenuEvent;
+        import mx.managers.PopUpManager;
+        import mx.managers.ToolTipManager;
+        import mx.utils.StringUtil;
+        
+        private static var instance:ChatWindow;
+        
+        private var thisObj:ChatWindow;
+        private var isActive:Boolean = true;
+        private var isSoundOn:Boolean = true
+        private var standingGraphics:StandingGraphics = new StandingGraphics();
+        private var fileReferenceForDownload:FileReference = null;
+        private var chatFontColor:String = "000000";
+        private var chatBackgroundColor:String = "FFFFFF";
+        private var chatFontSize:int = 12;
+        private var isDisplayTime:Boolean = false;
+        private var isDisplayOtherChannel:Boolean = false;
+        private var isChatChannelColored:Boolean = false;
+        private var chatMessageTrader:ChatMessageTrader;
+        private var novelticMode:NovelticMode = null;
+        
+        private var diceRollPlace:UIComponent = new UIComponent();
+        
+        private var baseDiceBot:Object = {name: Utils.baseDiceBotGameType, 
+                                          gameType: Utils.baseDiceBotGameType,
+                                          prefixs: [],
+                                          info: '' };
+        
+        public static function getInstance():ChatWindow {
+            return instance;
+        }
+        
+        public static function setTalk(b:Boolean):void {
+            canTalk = b;
+        }
+        
+        public function getDiceRollPlace():UIComponent {
+            return diceRollPlace;
+        }
+        
+        public function getChatFontColorValue():uint {
+            return parseInt( "0x" + getChatFontColor() );
+        }
+        
+        public function getChatFontColor():String {
+            return chatFontColor;
+        }
+        
+        public function getChatFontSize():int {
+            return chatFontSize;
+        }
+        
+        public function getStandingGraphics():StandingGraphics {
+            return standingGraphics;
+        }
+        
+        public function isSoundOnMode():Boolean {
+            return isSoundOn;
+        }
+        
+        static private var defaultCharacterName:String = "";
+        
+        static public function setDefaultCharacterName(name:String):void {
+            defaultCharacterName = name;
+            Log.logging('defaultCharacterName', defaultCharacterName);
+        }
+        
+        public function get publicChatChannelBox():ChatMessageLogBox {
+            return getChatChannle(0);
+        }
+        
+        public function printStandingGraphics(senderName:String,
+                                              chatMessage:String,
+                                              effectable:Boolean,
+                                              standingGraphicFilterImages:Array):Object {
+            var window:UIComponent = this;
+            
+            return standingGraphics.print(senderName,
+                                          chatMessage,
+                                          effectable,
+                                          standingGraphicFilterImages,
+                                          window.x, window.y, window.width);
+        }
+        
+        static public function getPlayerInfo():Object {
+            var info:Object = Config.getInstance().loadInfo( getSaveInfoKeyNameForPlayerInfo() );
+            return info;
+        }
+        
+        private function loadPlayerInfo():void {
+            var info:Object = getPlayerInfo();
+            if( info == null ) {
+                return;
+            }
+            
+            var characterName:String = info["characterName"];
+            Log.logging("loadPlayerInfo characterName", characterName);
+            if( characterName == "" ) {
+                characterName = defaultCharacterName;
+            }
+            
+            chatCharacterName.text = characterName;
+            chatCharacterName.validateNow();
+            Log.logging("loadPlayerInfo end, chatCharacterName.text", chatCharacterName.text);
+        }
+        
+        
+        private var initLoaded:Boolean = false;
+        
+        private function initLoadChatInfo():void {
+            Log.logging("initLoadChatInfo");
+            
+            try {
+                initLoadChatInfoLocal();
+            } catch(error:Error) {
+                Log.loggingException("ChatWindow.initLoadChatInfo", error);
+            }
+            
+            initLoaded = true;
+            
+            //var window:ColorWindow = DodontoF.popup(ColorWindow) as ColorWindow;
+            //window.init(this);
+        }
+            
+        private function initLoadChatInfoLocal():void {
+            var localInfo:Object = loadChatInfo(false);
+            var globalInfo:Object = loadChatInfo(true);
+            
+            if( localInfo != null ) {
+                setChatFontColor( localInfo["chatFontColor"] );
+                setChatBackgroundColor( localInfo["chatBackgroundColor"], true );
+                setDiceBotGameType( localInfo[getDiceBotGameTypeKeyName()] );
+            }
+            
+            if( globalInfo == null ) {
+                globalInfo = localInfo;
+            }
+            
+            if( globalInfo != null ) {
+                setDisplayTime( globalInfo["isDisplayTime"] );
+                setDisplayOtherChannel( globalInfo["isDisplayOtherChannel"] );
+                setChatChannelColoed( globalInfo["isChatChannelColored"] );
+                setChatFontSize( globalInfo["chatFontSize"] );
+            }
+        }
+        
+        public function setDiceBotGameType(gameType:String):void {
+            if( gameType == null ) {
+                return;
+            }
+            Utils.setGameTypeToComboBox(gameType, diceBotGameType);
+            changeDiceBotGameType();
+        }
+        
+        private function getDiceBotGameTypeKeyName():String { 
+            var numberString:String = "" + DodontoF_Main.getInstance().getGuiInputSender().getRoomNumber();
+            var keyName:String = numberString + "_diceBotGameType";
+            return keyName;
+        }
+        
+        public function saveChatInfos():void {
+            Log.logging("saveChatInfos initLoaded", initLoaded);
+            
+            if( ! initLoaded ) {
+                Log.logging("initLoaded not finished. so END");
+                return;
+            }
+            
+            if( DodontoF_Main.getInstance().isReplayMode() ) {
+                Log.logging("Replay Mode dose NOT save window infos.");
+                return;
+            }
+
+            
+            var localInfo:Object = loadChatInfo(false);
+            localInfo["chatFontColor"] = chatFontColor;
+            localInfo["chatBackgroundColor"] = chatBackgroundColor;
+            localInfo[getDiceBotGameTypeKeyName()] = getGameType();
+            saveChatInfo(localInfo, false);
+            
+            var globalInfo:Object = loadChatInfo(true);
+            globalInfo["isDisplayTime"] = isDisplayTime;
+            globalInfo["isDisplayOtherChannel"] = isDisplayOtherChannel;
+            globalInfo["isChatChannelColored"] = isChatChannelColored;
+            globalInfo["chatFontSize"] = chatFontSize;
+            saveChatInfo(globalInfo, true);
+        }
+        
+        private function loadChatInfo(isGlobal:Boolean):Object {
+            var info:Object = Config.getInstance().loadInfo( getSaveInfoKeyNameForChatFont(), isGlobal );
+            if( info == null ) {
+                info = new Object();
+            }
+            return info;
+        }
+        
+        private function saveChatInfo(info:Object, isGlobal:Boolean):void {
+            Config.getInstance().saveInfo(getSaveInfoKeyNameForChatFont(), info, isGlobal);
+        }
+        
+        
+        public function setInitPosition():void {
+            if( loadPosition() ) {
+                return;
+            }
+            
+            setInitPositionDefault();
+        }
+        
+        override public function setInitPositionDefault():void {
+            var screenWidth:int = DodontoF_Main.getInstance().getScreenWidth();
+            var screenHeigth:int = DodontoF_Main.getInstance().getScreenHeight();
+            var diceBoxWidth:int = DodontoF_Main.getInstance().getDiceBoxWidth();
+            
+            this.x = 0;
+            this.y = screenHeigth - this.height;
+            this.width = screenWidth - diceBoxWidth - 10;
+            
+            super.setInitPositionDefault();
+        }
+    
+        override public function getSaveInfoKeyName():String {
+            return "ChatWindow";
+        }
+        
+        private function getSaveInfoKeyNameForChatFont():String {
+            return "ChatWindow:Font";
+        }
+        
+        static private function getSaveInfoKeyNameForPlayerInfo():String {
+            return "ChatWindow:PlayerInfo";
+        }
+        
+        override protected function getHeaderHeight():Number {
+            return 14;
+        }
+        
+        
+        public function setChannelNames(changedChannelNames:Array):void {
+            
+            if( changedChannelNames.length == 0 ) {
+                Log.loggingError(Language.s.channerCoundIsEmptyErrorMessage);
+                return;
+            }
+            
+            changedChannelNames = getChannelNamesWhenReplayMode(changedChannelNames);
+            
+            removeChanells(changedChannelNames);
+            addChannels(changedChannelNames);
+            renameChanells(changedChannelNames);
+            
+            setDisplayOtherChannelCounting();
+            
+            selectChatChannelWhenVisiterMode();
+        }
+
+        private function selectChatChannelWhenVisiterMode():void {
+            if( isVisiterMode() ) {
+                selectChatChannel(lastChatChannel);
+            }
+        }
+
+        
+        private function getChannelNamesWhenReplayMode(names:Array):Array {
+            
+            if( ! DodontoF_Main.getInstance().isReplayMode() ) {
+                return names;
+            }
+            
+            var result:Array = new Array();
+            for(var i:int = 0 ; i < names.length ; i++) {
+                var name:String = names[i];
+                
+                if( DodontoF_Main.getInstance().getReplay().isIgnoreChannelName(name) ) {
+                    continue;
+                }
+                
+                result.push(name);
+            }
+            
+            return result;
+        }
+        
+        private function addChannels(changedChannelNames:Array):void {
+            for(var i:int = channels.length ; i < changedChannelNames.length ; i++) {
+                addChannel(changedChannelNames[i]);
+            }
+        }
+        private function removeChanells(changedChannelNames:Array):void {
+            while( channels.length > changedChannelNames.length ) {
+                var box:ChatMessageLogBox = channels.pop() as ChatMessageLogBox;
+                chatMessageLogBoxTab.removeChild(box);
+            }
+        }
+        private function renameChanells(changedChannelNames:Array):void {
+            for(var i:int = 0 ; i < changedChannelNames.length ; i++) {
+                var box:ChatMessageLogBox = getChatChannle(i);
+                box.setLabel(changedChannelNames[i]);
+            }
+        }
+        
+        private function setDisplayOtherChannelCounting():void {
+            
+            for(var i:int = 0 ; i < chatChannelCount ; i++) {
+                var box:ChatMessageLogBox = getChatChannle(i);
+                
+                if( isDisplayOtherChannel ) {
+                    box.stopNoCheckCount();
+                } else {
+                    box.startNoCheckCount();
+                }
+            }
+        }
+        
+        private var channels:Array = new Array();
+        
+        private function initChannels():Array {
+            channels = [];
+            publicChatChannelBox.init(novelticMode);
+            
+            var changedChannelNames:Array = DodontoF_Main.getInstance().getChatChannelNames();
+            for(var i:int = 0 ; i < changedChannelNames.length ; i++) {
+                addChannel(changedChannelNames[i]);
+            }
+            
+            return channels;
+        }
+        
+        public function addChannel(labelName:String):void {
+            var box:ChatMessageLogBox = new ChatMessageLogBox();
+            box.label = labelName;
+            box.init(novelticMode);
+            
+            chatMessageLogBoxTab.addChild(box);
+            chatMessageLogBoxTab.validateNow();
+            
+            channels.push(box);
+            box.setChannel(channels.length - 1);
+            box.setChatFontSize(getChatFontSize());
+            box.setBackGroundColor(getChatBackgroundColor());
+        }
+        
+        public function get publicChatChannel():int {
+            return getChatChannelIndex(publicChatChannelBox);
+        }
+        
+        public function get lastChatChannel():int {
+            return (channels.length - 1);
+        }
+        
+        public function get chatChannelCount():int {
+            return channels.length;
+        }
+        
+        private function getChatChannelIndex(target:ChatMessageLogBox):int {
+            var returnIndex:int = 0;
+            
+            eachChatChannel_with_index(function(i:ChatMessageLogBox, index:int):void {
+                    if( target == i ) {
+                        returnIndex = index;
+                    }
+                });
+            
+            return  returnIndex;
+        }
+        
+        public function getSelectedChatChannleIndex():int {
+            return chatMessageLogBoxTab.selectedIndex;
+        }
+        
+        public function getSelectedChatChannle():ChatMessageLogBox {
+            return getChatChannle(getSelectedChatChannleIndex());
+        }
+        
+        private var dummyBox:ChatMessageLogBoxDummy = new ChatMessageLogBoxDummy();
+        
+        public function getChatChannle(channel:int):ChatMessageLogBox {
+            var box:ChatMessageLogBox = channels[channel] as ChatMessageLogBox;
+            if( box == null ) {
+                return dummyBox;
+            }
+            
+            return box;
+        }
+        
+        public function eachChatChannel_with_index(action:Function):void {
+            for(var i:int = 0 ; i < channels.length ; i++) {
+                var chatChannel:ChatMessageLogBox = getChatChannle(i);
+                action( chatChannel, i );
+            }
+        }
+        
+        public function eachChatChannel(action:Function):void {
+            eachChatChannel_with_index(function(i:ChatMessageLogBox, index:int):void {
+                    action(i);
+                });
+        }
+        
+        public function changeChannel():void {
+            getSelectedChatChannle().resetLabelCount();
+            
+            var channel:int = getSelectedChatChannleIndex();
+            chatMessageLogBoxTab.getTabAt(channel).styleName = undefined;
+            
+            setTalkButton();
+            changeWindowStyle();
+        }
+        
+        public function setChatChannelVisible(channel:int, b:Boolean):void {
+            chatMessageLogBoxTab.getTabAt(channel).visible = b;
+        }
+        
+        public function selectChatChannel(channel:int):void {
+            chatMessageLogBoxTab.selectedIndex = channel;
+        }
+        
+        public function invisibleChatTab():void {
+            for(var i:int = 0 ; i < channels.length ; i++) {
+                var channel:int = i;
+                var tab:Button = chatMessageLogBoxTab.getTabAt(channel);
+                
+                if( tab == null ) {
+                    continue;
+                }
+                
+                tab.height = 0;
+                tab.width = 0;
+            }
+        }
+        
+        private var controlsHolder:HBox;
+        private var maximizeRestoreButton:Button;
+        private var sendErrorNotifyButton:UIComponent;
+        
+        override protected function createChildren():void {
+            super.createChildren();
+            
+            if ( ! headerDivider) {
+                headerDivider = new Sprite();
+                titleBar.addChild(headerDivider);
+            }
+            
+            initControlsHolder();
+            initSendErrorNotifyButton();
+            initMaximizeRestoreButton();
+        }
+        
+        private function initControlsHolder():void {
+            if ( controlsHolder != null ) {
+                return;
+            }
+            
+            controlsHolder = new HBox();
+            controlsHolder.setStyle("paddingRight", getStyle("paddingRight"));
+            controlsHolder.setStyle("horizontalAlign", "right");
+            controlsHolder.setStyle("verticalAlign", "middle");
+            controlsHolder.setStyle("horizontalGap", 3);
+            rawChildren.addChild(controlsHolder);
+            Log.logging("controlsHolder created.");
+            
+            if( ! statusTextField ) {
+                rawChildren.setChildIndex(controlsHolder, 1);
+            }
+        }
+        
+        private function initMaximizeRestoreButton():void {
+            if ( maximizeRestoreButton != null) {
+                return;
+            }
+            
+            var button:Button = new Button();
+            button.width = 14;
+            button.height = 14;
+            button.styleName = "maximizeRestoreButtonStyle";
+            
+            button.addEventListener(MouseEvent.CLICK, onClickMaximizeRestoreButton);
+            
+            controlsHolder.addChild(button);
+            maximizeRestoreButton = button;
+            
+            Log.logging("maximizeRestoreButton created.");
+        }
+        
+        private function initSendErrorNotifyButton():void {
+            if( sendErrorNotifyButton != null ) {
+                return;
+            }
+            
+            var image:Image = new Image();
+            image.source = sendChatMessageErrorIcon;
+            image.width = 16;
+            image.height = 16;
+            image.toolTip = Language.s.sendChatErrorMessage;
+            image.addEventListener(MouseEvent.CLICK, function(event:MouseEvent = null):void {
+                    SendChatMessageFailedWindow.setWindowVisible(true);
+                });
+            image.visible = false;
+            image.useHandCursor = true;
+            
+            controlsHolder.addChild(image);
+            sendErrorNotifyButton = image;
+            
+            var spacer:Spacer = new Spacer();
+            spacer.width = 10;
+            controlsHolder.addChild(spacer);
+        }
+        
+        public function setSendErrorNotifyButtonEnable(b:Boolean):void {
+            sendErrorNotifyButton.visible = b;
+            
+            if( b ) {
+                Utils.glowEffect( sendErrorNotifyButton,
+                                  glowEffectForChatError );
+            }
+        }
+        
+        private var originalHeigth:int = 100;
+        private var originalYPosition:int = 0;
+        
+        private function onClickMaximizeRestoreButton(event:MouseEvent=null):void {
+            
+            if (windowState == WINDOW_STATE_DEFAULT) {
+                originalHeigth = this.height;
+                originalYPosition = this.y;
+                
+                var heightPadding:int = DodontoF_Main.getInstance().getDodontoF().getMainBarHeight();
+                this.height = DodontoF_Main.getInstance().getScreenHeight() - heightPadding;
+                this.y = heightPadding;
+                
+                windowState = WINDOW_STATE_MAXIMIZED;
+                maximizeRestoreButton.selected = true;
+                setSavePositionEnable(false);
+                
+            } else if (windowState == WINDOW_STATE_MAXIMIZED) {
+                this.height = originalHeigth;
+                this.y = originalYPosition;
+                windowState = WINDOW_STATE_DEFAULT;
+                maximizeRestoreButton.selected = false;
+                setSavePositionEnable(true);
+                
+                this.validateNow();
+                var channel:int = getSelectedChatChannleIndex();
+                var isScrollFoced:Boolean = true;
+                scrollChatMessageLogIfPositionIsLast(channel, isScrollFoced);
+            }
+        }
+        
+        public static const MINIMIZED_HEIGHT:Number = 22;
+        public static const WINDOW_STATE_DEFAULT:Number = -1;
+        public static const WINDOW_STATE_MINIMIZED:Number = 0;
+        public static const WINDOW_STATE_MAXIMIZED:Number = 1;
+        
+        public var windowState:Number = WINDOW_STATE_DEFAULT; // Corresponds to one of the WINDOW_STATE variables.
+        private var headerDivider:Sprite;
+        
+        override protected function updateDisplayList(unscaledWidth:Number, unscaledHeight:Number):void {
+            super.updateDisplayList(unscaledWidth, unscaledHeight);
+            
+            var deltaY:Number = windowState == WINDOW_STATE_MINIMIZED ? -1 : 0;
+            var graphics:Graphics = headerDivider.graphics;
+            graphics.clear();
+            graphics.lineStyle(1, getStyle("borderColor"));
+            graphics.moveTo(1, titleBar.height + deltaY);
+            graphics.lineTo(titleBar.width, titleBar.height + deltaY);
+            
+            controlsHolder.y = titleBar.y;
+            controlsHolder.width = unscaledWidth - 30;
+            controlsHolder.height = titleBar.height;
+            
+            statusTextField.width = unscaledWidth - 200;
+            
+            titleTextField.width = titleBar.width - getStyle("paddingLeft") - getStyle("paddingRight");
+        }
+        
+        override public function set status(text:String):void {
+            super.status = text + "            ";
+        }
+        
+        override public function setup():void {
+            titleBar.addChild(diceRollPlace);
+            
+            publicChatChannelBox.checkNovelMode();
+            initChannels();
+            
+            novelticMode = new NovelticMode(this);
+            chatMessageTrader= new ChatMessageTrader(this);
+            
+            instance = this;
+            thisObj = this;
+            
+            initDiceBotInfos();
+            
+            setInitPosition();
+            setSoundStateImage();
+            
+            diceBotGameType.visible = isDiceBotOn;
+            if( ! isDiceBotOn ) {
+                diceBotGameType.width = 0;
+            }
+            ToolTipManager.showDelay = 0;
+            ToolTipManager.hideDelay = Infinity;
+            
+            changeDiceBotGameType();
+            
+            this.addEventListener(Event.ACTIVATE, function():void {instance.isActive = true;});
+            this.addEventListener(Event.DEACTIVATE, function():void {instance.isActive = false;});
+            this.addEventListener(MouseEvent.MOUSE_WHEEL, wheelEvent);
+            this.chatMessageInput.addEventListener(MouseEvent.MOUSE_WHEEL, wheelEvent);
+            
+            loadPlayerInfo();
+            changedChatCharacterName();
+            setSendSoundButtonOn();
+            
+            novelticMode.init();
+            initLoadChatInfo();
+            setChatFontSize( chatFontSize );
+            
+            setResizeEventFunction( novelticMode.resizeAndMoveWindow );
+            setMoveEventFunction( novelticMode.resizeAndMoveWindow );
+            
+            changeWindowStyle();
+            setTalkButton();
+        }
+        
+        public function initDiceBotInfos():void {
+            Log.logging("initDiceBotInfos called");
+            
+            var diceBotInfos:Array = DodontoF_Main.getInstance().getDiceBotInfos();
+            Utils.setDiceBotDataProvider( diceBotGameType, diceBotInfos );
+        }
+        
+        public function setDiceBotInfos(diceBotInfos:Array):void {
+            Log.logging("setDiceBotInfos called");
+            
+            var gameType:String = diceBotGameType.selectedItem.gameType;
+            
+            baseDiceBot = removeBaseDiceBot( diceBotInfos );
+            Utils.setDiceBotDataProvider( diceBotGameType, diceBotInfos );
+            
+            setDiceBotGameType(gameType);
+            
+            initDicePatterns();
+        }
+        
+        
+        private function removeBaseDiceBot(diceBotInfos:Object):Object {
+            
+            var info:Object = Utils.removeBaseDiceBot(diceBotInfos);
+            if( info != null ) {
+                return info;
+            }
+            
+            return baseDiceBot;
+        }
+        
+        
+        private function wheelEvent(event:MouseEvent):void {
+            if( novelticMode.isNovelticModeOn() )  {
+                novelticMode.wheelEvent(event);
+                return;
+            }
+            
+            ChatWindow.wheelScrollComponent(getSelectedChatChannle(), event);
+        }
+        
+        public static function wheelScrollComponent(box:Box, event:MouseEvent):void {
+            box.verticalScrollPosition -= (event.delta * 3);
+        }
+        
+        public function clearForReplay():void {
+            standingGraphics.clear();
+            clearPublicChatMessageLog();
+        }
+        
+        public function setStandingGraphics(infos:Array):void {
+            standingGraphics.clear();
+            for(var i:int = 0 ; i < infos.length ; i++) {
+                var info:Object = infos[i];
+                standingGraphics.add(info);
+            }
+            refreshChatCharacterName();
+        }
+        
+        public function getChatCharacterName():String {
+            var name:String = chatCharacterName.text;
+            if( isVisiterMode() ) {
+                name += Language.s.visitorNameSaffix;
+            }
+            return name;
+        }
+        
+        public function refreshChatCharacterName():void {
+            Log.logging("refreshChatCharacterName() begin, chatCharacterName.text", chatCharacterName.text);
+            
+            var tmpChatCharacterName:String = chatCharacterName.text;
+            
+            var names:Array = standingGraphics.findAllNames();
+            
+            var dataProvider:Array = [];
+            for(var i:int = 0 ; i < names.length ; i++) {
+                var option:Object = {
+                    data : names[i],
+                    label : names[i]};
+                dataProvider.push(option);
+            }
+            chatCharacterName.dataProvider = dataProvider;
+            chatCharacterName.validateNow();
+            standingGraphicsStates.validateNow();
+            
+            chatCharacterName.text = tmpChatCharacterName;
+            changedChatCharacterName();
+            Log.logging("refreshChatCharacterName() end, chatCharacterName.text", chatCharacterName.text);
+        }
+        
+        private function savePlayerInfoOnLocal():void {
+            Log.logging("savePlayerInfoOnLocal");
+            savePlayerInfo(chatCharacterName.text);
+        }
+        
+        static public function savePlayerInfo(name:String):void {
+            Log.logging("savePlayerInfo static");
+            
+            var info:Object = {
+                characterName: name
+            };
+            
+            Config.getInstance().saveInfo(getSaveInfoKeyNameForPlayerInfo(), info);
+            
+            Log.logging("savePlayerInfo characterName", info);
+        }
+        
+        private function changedChatCharacterName():void {
+            Log.logging("changedChatCharacterName() begin");
+            
+            var name:String = chatCharacterName.text;
+            var stateList:Array = standingGraphics.findAllStates(name);
+            
+            Log.logging("changedChatCharacterName name", name);
+            
+            if( stateList.length == 0 ) {
+                standingGraphicsStates.visible = false;
+                standingGraphicsStates.width = 0;
+            } else {
+                standingGraphicsStates.visible = true;
+                standingGraphicsStates.explicitWidth = NaN;
+            }
+            
+            var dataProvider:Array = [];
+            for(var i:int = 0 ; i < stateList.length ; i++) {
+                var option:Object = {
+                    data : stateList[i],
+                    label : stateList[i]};
+                dataProvider.push(option);
+            }
+            var preState:String = Utils.getComboBoxText(standingGraphicsStates);
+            standingGraphicsStates.dataProvider = dataProvider;
+            Utils.selectComboBox(standingGraphicsStates, preState);
+            
+            savePlayerInfoOnLocal();
+            
+            Log.logging("changedChatCharacterName() end, chatCharacterName.text", chatCharacterName.text);
+        }
+        
+        private function changeDiceBotGameType():void {
+            setDiceBotHelpText();
+            initDiceSymbolsMenu();
+        }
+        
+        private function setDiceBotHelpText():void {
+            saveChatInfos();
+            var helpText:String = getBaseHelpText();
+            var item:Object = diceBotGameType.selectedItem;
+            
+            helpText += getDiceBotHelpText(item);
+            
+            diceBotHelpText = helpText;
+        }
+        
+        private function getDiceBotHelpText(item:Object):String {
+            var text:String = "";
+            
+            text += Language.text("diceBotCustomInfomation", item.name);
+            text += item.info;
+            
+            return text;
+        }
+        
+        private function getBaseHelpText():String {
+            var helpText:String = baseDiceBot.info;
+            return helpText;
+        }
+        
+        private function initDiceSymbolsMenu():void {
+            var map:Map = DodontoF_Main.getInstance().getMap();
+            var diceSymbols:Array = map.findExistPiecesByTypeName( DiceSymbol.getTypeStatic() );
+            
+            for each(var piece:Piece in  diceSymbols) {
+                var diceSymbol:DiceSymbol = piece as DiceSymbol;
+                if( diceSymbol == null ) {
+                    continue;
+                }
+                
+                diceSymbol.updateContextMenu();
+            }
+        }
+        
+        private static var isDiceBotOn:Boolean = true;
+        public static function setDiceBotOn(b:Boolean):void {
+            isDiceBotOn = b;
+        }
+    
+        private var isChatMessageInputing:Boolean = false;
+        public function onChatMessageInput(event:TextEvent):void {
+            Log.logging("event.text", event.text);
+            isChatMessageInputing = true;
+        }
+        
+        public function keyUpInChatMessage(event:KeyboardEvent):void {
+            if( ! readyToSend ) {
+                return;
+            }
+            
+            sendChatMessage(getSelectedChatChannleIndex(), chatMessageCash);
+            readyToSend = false;
+        }
+        
+        private var chatMessageCash:String = "";
+        private var readyToSend:Boolean = false;
+        
+        public function keyDownInChatMessage(event:KeyboardEvent):void {
+            
+            if( event.ctrlKey ) {
+                if( printHistory(event) ) {
+                    return;
+                }
+                if( shiftChatChannel(event) ) {
+                    Log.logging("shift");
+                    return;
+                }
+            }
+            
+            if( readyToSend ) {
+                return;
+            }
+        
+            if( event.keyCode != Keyboard.ENTER ) {
+                return;
+            }
+        
+            if( event.shiftKey || event.ctrlKey ) {
+                insertRetun();
+                return;
+            }
+            
+            readyToSend = true;
+            chatMessageCash = chatMessageInput.text;
+            
+            chatMessageInput.callLater(function():void {
+                    chatMessageInput.text = "";
+                });
+            
+            chatInputHistory.push(chatMessageCash);
+            chatInputHistoryCurrentIndex = chatInputHistory.length;
+            newestChatInput = "";
+            
+            //event.stopPropagation();
+        }
+        
+        private var newestChatInput:String = "";
+        private var chatInputHistory:Array = [];
+        private var chatInputHistoryCurrentIndex:int = 0;
+        
+        private function printHistory(event:KeyboardEvent):Boolean {
+            if( event.keyCode == Keyboard.UP ) {
+                
+                if( chatInputHistoryCurrentIndex == chatInputHistory.length ) {
+                    if( newestChatInput == "" ) {
+                        newestChatInput = chatMessageInput.text;
+                    }
+                }
+                
+                chatInputHistoryCurrentIndex -= 1;
+            } else if( event.keyCode == Keyboard.DOWN ) {
+                chatInputHistoryCurrentIndex += 1;
+            } else {
+                return false;
+            }
+            
+            if( chatInputHistoryCurrentIndex < 0 ) {
+                chatInputHistoryCurrentIndex = 0;
+                return false;
+            }
+            
+            if( chatInputHistoryCurrentIndex > chatInputHistory.length ) {
+                chatInputHistoryCurrentIndex = chatInputHistory.length;
+                return false;
+            }
+            
+            var oldInput:String = "";
+            if( chatInputHistoryCurrentIndex < chatInputHistory.length ) {
+                oldInput = chatInputHistory[chatInputHistoryCurrentIndex];
+            } else {
+                oldInput = newestChatInput;
+            }
+            
+            chatMessageInput.text = oldInput;
+            return true;
+        }
+        
+        public function shiftChatChannel(event:KeyboardEvent):Boolean {
+            Log.logging("shiftChatChannel");
+            var result:Boolean = false;
+            
+            Utils.shiftTabFocus(chatMessageLogBoxTab, event, function(index:int):void {
+                result = true;
+            });
+            
+            return result;
+        }
+        
+        private function insertRetun():void {
+            insertWord("\n", chatMessageInput);
+        }
+        
+        public function addTextToChatMessageInput(text:String):void {
+            chatMessageInput.text += text;
+        }
+        
+        static public function insertWord(word:String, textArea:TextArea):void {
+            var text:String  = textArea.text;
+            var start:int = textArea.selectionBeginIndex;
+            var last:int  = text.length;
+            
+            textArea.text = text.substring(0, start) + word + text.substring(start, last);
+            
+            var newIndex:int = start + word.length;
+            textArea.setSelection(newIndex, newIndex);
+        }
+        
+        public function getGameType():String { 
+            return diceBotGameType.selectedItem.gameType;
+        }
+        
+        public function sendChatMessageLocal():void {
+            sendChatMessage(getSelectedChatChannleIndex(), chatMessageInput.text);
+            chatMessageInput.callLater(function():void { chatMessageInput.text = ""; });
+        }
+        
+        public function sendChatMessageForDiceRollResult(channel:int, chatMessage:String):void {
+            var isCheckDiceRoll:Boolean = false
+            sendChatMessage(channel, chatMessage, isCheckDiceRoll);
+        }
+        
+        public function changeChatChannelNumberForSystemLog(channel:int):int {
+            channel = getChatChannleWhenVisiterMode(channel);
+            return channel;
+        }
+        
+        public function sendChatMessage_selected(chatMessage:String):void {
+            var channel:int = getSelectedChatChannleIndex();
+            channel = getChatChannleWhenVisiterMode(channel);
+            
+            sendChatMessage(channel, chatMessage);
+        }
+        
+        public function sendChatMessage_public(chatMessage:String):void {
+            var channel:int = publicChatChannel;
+            channel = getChatChannleWhenVisiterMode(channel);
+            
+            sendChatMessage(channel, chatMessage);
+        }
+        
+        public function sendChatMessage(channel:int, chatMessage:String, isCheckDiceRoll:Boolean = true):void {
+            Log.logging("sendChatMessage begin");
+            
+            var data:ChatSendData = new ChatSendData(channel, chatMessage);
+            sendChatMessageByChatSendData(data, isCheckDiceRoll);
+        }
+        
+        private function isVisiterMode():Boolean {
+            return DodontoF_Main.getInstance().isVisiterMode();
+        }
+        
+        private function getChatChannleWhenVisiterMode(channel:int):int {
+            if( isVisiterMode() ) {
+                channel = this.lastChatChannel;
+            }
+            
+            return channel;
+        }
+        
+        public function sendChatMessageByChatSendData(data:ChatSendData, isCheckDiceRoll:Boolean = true):void {
+            var channel:int = getChatChannleWhenVisiterMode(data.getChannel());
+            data.setChannel( channel );
+            selectChatChannelWhenVisiterMode();
+            
+            Log.logging("sendChatMessageByChatSendData begin");
+            if( data.getMessage() == "" ) {
+                Log.logging("data.getMessage() is empty")
+                return;
+            }
+            
+            data.replaceMessage(/$/, getSendToNames());
+            
+            clearDice();
+            
+            if( checkDiceRoll(data, isCheckDiceRoll) ) {
+                return;
+            }
+            
+            Log.logging("chatMessageTrader.sendMessage(data)");
+            chatMessageTrader.sendMessage(data);
+        }
+        
+        static private function getSendToNames():String {
+            var characters:Array = Character.getSelectedCharacters();
+            if( characters.length == 0 ) {
+                return "";
+            }
+            
+            var text:String = "";
+            for each (var character:Character in characters) {
+                text += " ＞" + character.getName();
+            }
+            
+            Character.unselectAllCharacters();
+            
+            return text;
+        }
+        
+        
+        static public function clearDice():void {
+            if( DodontoF_Main.getInstance().getDiceBox() == null ) {
+                return;
+            }
+            
+            DodontoF_Main.getInstance().getDiceBox().clearRolledDice();
+        }
+        
+        private function checkDiceRoll(data:ChatSendData, isCheckDiceRoll:Boolean):Boolean {
+            Log.logging("isCheckDiceRoll", isCheckDiceRoll);
+                
+            if( ! isCheckDiceRoll ) {
+                return false;
+            }
+            
+            if( isSecretTalkMode() ) {
+                return false;
+            }
+            
+            var message:String = data.getMessage();
+            
+            if( message.indexOf( CutInCommandBase.getBeginMarker() ) == 0 ) {
+                message = "Wrong Message -> " + message;
+                data.setMessage(message);
+            }
+            
+            var diceRollData:Object = getDiceRollText(message);
+            
+            var diceRollMessage:String = diceRollData.message;
+            Log.logging("diceRollMessage", diceRollMessage);
+                
+            if( diceRollMessage == null ) {
+                return false;
+            }
+            
+            var repeatCount:int = diceRollData.repeatCount;
+            Log.logging("repeatCount", repeatCount);
+            
+            data.setMessage(diceRollMessage);
+            
+            var randomSeed:int = Dice.getRandomNumber(0xffff);
+            data.setDiceBotData(randomSeed, repeatCount, sendDiceBotChatMessageResult);
+            
+            var gameType:String = data.getGameType();
+            Log.logging("sendDiceBotChatMessage(data, gameType) before gameType", gameType);
+            if( gameType == null ) {
+                gameType = getGameType();
+                Log.logging("sendDiceBotChatMessage(data, gameType) after gameType", gameType);
+                data.setGameType(gameType);
+            }
+            
+            sendDiceBotChatMessage(data);
+            
+            return true;
+        }
+        
+        private function isSecretTalkMode():Boolean {
+            var target:String = Utils.getComboBoxText(sendtoBox);
+            if( target == null )  {
+                return false;
+            }
+            if( target == "" ) {
+                return false;
+            }
+            return true;
+        }
+        
+        
+        public function chatMessageTrader_sendMessage_selectedChat(chatMessage:String):void {
+            var channel:int = getSelectedChatChannleIndex();
+            chatMessageTrader_sendMessage(channel, chatMessage);
+        }
+        
+        public function chatMessageTrader_sendMessage_publicChatChannel(chatMessage:String):void {
+            var isForcePublic:Boolean = true
+            chatMessageTrader_sendMessage(publicChatChannel, chatMessage, isForcePublic);
+        }
+        
+        public function chatMessageTrader_sendMessage(channel:int, chatMessage:String, isForcePublic:Boolean = false):void {
+            var data:ChatSendData = new ChatSendData(channel, chatMessage);
+            if( isForcePublic ) {
+                data.setNoSendto();
+            }
+            
+            chatMessageTrader.sendMessage(data);
+        }
+        
+        
+        public function sendChatMessageAgain(data:ChatSendData):void {
+            chatMessageTrader.sendMessage(data);
+        }
+        
+        
+        private function getDiceRollText(text:String):Object {
+            var result:Object = new Object();
+            
+            if( ! isDiceBotOn ) {
+                return result;
+            }
+            
+            var text:String = Utils.changeZenkakuToHankaku(text);
+            var patterns:Array = getDicePatterns();
+            
+            for(var i:int = 0; i < patterns.length ; i++) {
+                var pattern:RegExp = patterns[i];
+                Log.logging("pattern", pattern);
+                
+                var matchResult:Object = pattern.exec(text);
+                Log.logging("matchResult", matchResult);
+                
+                if( matchResult == null ) {
+                    continue;
+                }
+                
+                result.message = matchResult[3];
+                result.repeatCount = getRepeatCount(matchResult[2]);
+                break;
+            }
+            
+            Log.logging("result", result);
+            
+            return result;
+        }
+        
+        private function getRepeatCount(obj:Object):int {
+            var repeatCount:int = 1;
+            
+            var valueString:String = obj as String;
+            if( valueString == null ) {
+                return repeatCount;
+            }
+            
+            repeatCount = parseInt(valueString);
+            
+            if( repeatCount == 0 ) {
+                repeatCount = 1;
+            }
+            
+            return repeatCount;
+        }
+        
+        private var dicePatternsList:Object = new Object();
+        
+        private function initDicePatterns():void {
+            dicePatternsList = new Object();
+        }
+        
+        private function getDicePatterns():Array {
+            var gameTypeIndex:int = diceBotGameType.selectedIndex;
+            
+            var patterns:Array = dicePatternsList[gameTypeIndex];
+            if( patterns != null ) {
+                Log.logging("patterns is already exist");
+                return patterns;
+            }
+            
+            patterns = new Array();
+            
+            addPrefixToPatterns( baseDiceBot.prefixs, patterns);
+            
+            var prefixs:Array = diceBotGameType.dataProvider[gameTypeIndex].prefixs;
+            addPrefixToPatterns( prefixs, patterns );
+            
+            Log.logging("create new patterns");
+            dicePatternsList[gameTypeIndex] = patterns
+            
+            return patterns;
+        }
+        
+        private function addPrefixToPatterns(prefixs:Array, patterns:Array):void {
+            
+            for each(var prefix:String in prefixs) {
+                    patterns.push( new RegExp("^((\\d+)\\s+)?(S" + prefix + ".*)", "is") );
+                    patterns.push( new RegExp("^((\\d+)\\s+)?(" + prefix + ".*)", "is") );
+                }
+        }
+        
+        private function isMatchGamePreFixByTargetPattern(targetText:String, pattern:RegExp):Boolean {
+            var index:int = targetText.search( pattern );
+            return ( index == 0 );
+        }
+        
+        private function sendDiceBotChatMessage(data:ChatSendData):void {
+            chatMessageInput.text = "";
+            
+            data.replaceMessage("　", " ");
+            data.setNameFromChatWindow();
+            //data.setSendtoFromChatWindow();
+            
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.sendChatMessage(data);
+        }
+    
+        
+        private function getDiceBotParam(str:String):String {
+            if( str == "" ) {
+                return null;
+            }
+            return str;
+        }
+        
+        public function sendDiceBotChatMessageResult(obj:Object):void {
+            Log.loggingTuning("=>sendDiceBotChatMessageResult(event:Event) Begin");
+            
+            try {
+                var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(obj);
+                var array:Array = jsonData as Array;
+                Log.logging("jsonData array", array);
+                
+                if( array == null ) {
+                    Log.loggingTuning("=>sendDiceBotChatMessageResult array is null");
+                    return;
+                }
+                
+                for each(var data:Object in array) {
+                        sendDiceBotChatMessageResultOne(data);
+                }
+                
+            } catch(e:Error) {
+                Log.loggingException("ChatWindow.sendDiceBotChatMessageResult()", e);
+            }
+            
+            Log.loggingTuning("=>sendDiceBotChatMessageResult(event:Event) End");
+        }
+        
+        private function sendDiceBotChatMessageResultOne(jsonData:Object):void {
+            if( jsonData == null ) {
+                Log.logging("jsonData is null");
+                return;
+            }
+            
+            var isSecret:Boolean = jsonData.isSecret;
+            Log.logging("isSecret", isSecret);
+            
+            if( ! isSecret ) {
+                Log.logging("result NOT isSecret");
+                return;
+            }
+            
+            Log.logging("jsonData", jsonData);
+            
+            var channel:int = jsonData.channel;
+            var message:String = jsonData.message;
+            var name:String = jsonData.name;
+            var state:String = jsonData.state;
+            var color:String = jsonData.color;
+            
+            var data:ChatSendData = new ChatSendData(channel, message, name, state);
+            data.setSendto(jsonData.sendto, jsonData.sendtoName);
+            data.setColorString(color);
+            data.setDiceRollResult();
+            var secretMessage:String = SecretDiceWindow.printMessage(data);
+            
+            var secretMarker:String = Language.text("secretDice");
+            secretMessage = secretMarker + "\n" + secretMessage;
+            addLocalMessage(secretMessage);
+        }
+        
+        public function sendDiceRollResultMessageForChatWindowUser(diceRolledText:String):void {
+            var channel:int = getSelectedChatChannleIndex();
+            channel = getChatChannleWhenVisiterMode(channel);
+            
+            var data:ChatSendData = new ChatSendData(channel, diceRolledText);
+            selectChatChannelWhenVisiterMode();
+            data.setDiceRollResult();
+            sendDiceRollResultMessage(data);
+        }
+        
+        public function sendDiceRollResultMessage(data:ChatSendData):void {
+            chatMessageTrader.sendMessage(data);
+        }
+        
+        
+        public function sendSystemMessage(messageBase:String, args:Array = null, strictlyUniqueId:String = null):void {
+            chatMessageTrader.sendSystemMessage(messageBase, args, strictlyUniqueId);
+        }
+        
+        public function addLocalMessage(message:String):void {
+            chatMessageTrader.addLocalMessage(message);
+        }
+        
+        private var userNames:Object = new Array();
+        
+        public function setUserNames(name:String):void {
+            userNames[name] = true;
+        }
+        
+        
+        public function setChatFontSize(size:int, isReplayMode:Boolean = false):void {
+            
+            if( size == 0 ) {
+                return;
+            }
+            
+            chatFontSize = size;
+            chatMessageInput.setStyle("fontSize", chatFontSize);
+            
+            eachChatChannel(function(logBox:ChatMessageLogBox):void {
+                    logBox.setChatFontSize(chatFontSize);
+                    
+                    if( ! isReplayMode ) {
+                        printChatLog(logBox);
+                    }
+                });
+        }
+        
+        private function printChatLog(logBox:ChatMessageLogBox):void {
+            
+            var isCheckCounting:Boolean = ( ! logBox.isNoCheckCountingMode());
+            
+            //未読件数がカウントされていたなら、ここで一時的に止める。
+            if( ! isCheckCounting ) {
+                logBox.stopNoCheckCount();
+            }
+            
+            logBox.resizeChatLog(novelticMode);
+            
+            var channel:int = logBox.getChannel();
+            printAddedMessageToChatMessageLog();
+            scrollChatMessageLogIfPositionIsLast(channel, true);
+            
+            //未読件数がカウントされていたなら、ここで再開する。
+            if( ! isCheckCounting ) {
+                logBox.startNoCheckCount();
+            }
+        }
+        
+        
+        public function setDisplayTime(b:Boolean, isReplayMode:Boolean = false):void {
+            if( isReplayMode ) {
+                return;
+            }
+            
+            isDisplayTime = b;
+        }
+        
+        public function setDisplayOtherChannel(b:Boolean, isReplayMode:Boolean = false):void {
+            if( isReplayMode ) {
+                return;
+            }
+            
+            isDisplayOtherChannel = b;
+            setDisplayOtherChannelCounting();
+        }
+        
+        public function setChatChannelColoed(b:Boolean):void {
+            isChatChannelColored = b;
+            changeWindowStyle();
+        }
+        
+        public function getDisplayTime():Boolean {
+            return isDisplayTime
+        }
+        
+        public function isDisplayOtherChannelMode():Boolean {
+            return isDisplayOtherChannel;
+        }
+        
+        public function getChatMessageTrader():ChatMessageTrader {
+            return chatMessageTrader;
+        }
+        
+        public function addMessageToChatLog(data:ChatSendData,
+                                            time:Number,
+                                            chatSenderUniqueId:String,
+                                            isReplayChatMessage:Boolean = false):void {
+            chatMessageTrader.addMessageToChatLog(data,
+                                                  time,
+                                                  chatSenderUniqueId,
+                                                  isReplayChatMessage);
+        }
+        
+        public function addMessageToChatLogParts(data:ChatSendData,
+                                                 time:Number,
+                                                 chatSenderUniqueId:String,
+                                                 isReplayChatMessage:Boolean = false):Boolean {
+            
+            return chatMessageTrader.addMessageToChatLogParts(data,
+                                                              time,
+                                                              chatSenderUniqueId,
+                                                              isReplayChatMessage);
+        }
+        
+        public function printAddedMessageToChatMessageLog():void {
+            chatMessageTrader.printAddedMessageToChatMessageLog();
+        }
+        
+        public function initForFirstRefresh(isWelcomeMessageOn:Boolean):void {
+            if( isWelcomeMessageOn ) {
+                sendSystemMessage(Language.s.loginMessage);
+            }
+            
+            var message:String = DodontoF_Main.getInstance().getLoginTimeLimitSecondMessage();
+            Log.logging("message", message);
+            if( message != null ) {
+                addLocalMessage(message);
+            }
+            
+            //初回ログイン用スクロール
+            scrollChatMessageLogIfPositionIsLast(getSelectedChatChannleIndex(), true);
+            
+            isFirstLoadFinished = true;
+        }
+        
+        public function scrollChatMessageLogIfPositionIsLast(channel:int, isForceScroll:Boolean):void {
+            if( DodontoF_Main.getInstance().isReplayMode() ) {
+                return;
+            }
+            
+            if( novelticMode.isNovelticModeOn() ) {
+                publicChatChannelBox.validateNow_All();
+                novelticMode.scrollChatMessageLogIfPositionIsLast(isForceScroll);
+                return;
+            }
+            
+            getChatChannle(channel).scrollChatBox(isForceScroll);
+        }
+        
+        public function scrollChatBox(component:Box, isForceScroll:Boolean = false):void {
+            ChatMessageLogBox.scrollChatBox_static(chatFontSize, component, isForceScroll);
+        }
+        
+        public function isScrollPositionBottom(channel:int):Boolean {
+            if( getSelectedChatChannleIndex() != channel ) {
+                return true;
+            }
+            
+            return getChatChannle(channel).isScrollPositionBottom();
+        }
+        
+        
+        private var allUserName:String = Language.s.allMember;
+    
+        private function getAlarmStringPrefix(userName:String):String {
+            return Language.text("alarmMessage", userName);
+        }
+        
+        private function getAlarmString(userName:String, soundFileName:String, seconds:int):String {
+            var text:String = getAlarmStringPrefix(userName) + soundFileName;
+            if( seconds > 0 ) {
+                text += Language.text("alarmMessageSecond", seconds);
+            }
+            return text;
+        }
+        
+        public function isToMyAlarm(chatMessage:String):Boolean {
+            Log.logging("ChatWindow.isToMyAlarm chatMessage", chatMessage);
+            
+            if( (chatMessage.indexOf( getAlarmStringPrefix(allUserName)) == 0) ||
+                (chatMessage.indexOf( getAlarmStringPrefix(chatCharacterName.text))) == 0) {
+                return true;
+            }
+            return false;
+        }
+    
+        public function getUserNames():Array {
+            var userNameArray:Array = new Array();
+        
+            userNameArray.push(allUserName);
+        
+            for(var key:String in userNames) {
+                if( key == "" ) {
+                    continue;
+                }
+                userNameArray.push(key);
+            }
+        
+            return userNameArray;
+        }
+    
+        public function saveChatLog():void {
+            var window:SaveChatLogWindow = DodontoF.popup(SaveChatLogWindow, true) as SaveChatLogWindow;
+            window.init(this);
+        }
+        
+        [Embed(source="sound/page.mp3")]
+        [Bindable]
+        private var addMessageSound:Class;
+
+        private var isSoundPlaying:Boolean = false;
+        
+        //どどんとふ起動後の初期手続きが完了したかのチェック用。
+        private var isFirstLoadFinished:Boolean = false;
+        
+        public function playAddMessageSound(senderName:String):void {
+            if( ! isFirstLoadFinished ) {
+                return;
+            }
+            
+            if( ! isSoundOn ) {
+                return;
+            }
+        
+            if( isActive ) {
+                return;
+            }
+            
+            if( senderName == chatCharacterName.text ) {
+                return;
+            }
+        
+            if( isSoundPlaying ) {
+                return;
+            }
+            
+            isSoundPlaying = true;
+            var sound:Sound = new addMessageSound() as Sound; 
+            sound.play();
+            isSoundPlaying = false;
+        }
+    
+        public function openCreateStandingGraphicsWindow():void {
+            DodontoF.popup(StandingGraphicsManageWindow, true);
+        }
+        
+        private function uploadFile():void {
+            DodontoF.popup(FileUploadWindow, true);
+        }
+        
+        public function openCreateCutInWindow():void {
+            DodontoF.popup(ManageCutInMovieWindow, false);
+        }
+        
+        private var soundChannel:SoundChannel;
+    
+        private function sendOrStopSound():void {
+            if( stopSound() ) {
+                return;
+            }
+            
+            DodontoF.popup(AlarmWindow, true);
+        }
+        
+        public function sendSound(userName:String, soundFileName:String, seconds:int):void {
+            var alarmString:String = getAlarmString(userName, soundFileName, seconds);
+            chatMessageTrader_sendMessage(publicChatChannel, alarmString);
+        }
+    
+        private function stopSound():Boolean {
+            if( soundChannel == null ) {
+                return false;
+            }
+        
+            setSendSoundButtonOn();
+            soundChannel.stop();
+            soundChannel = null;
+            return true;
+        }
+        
+        private function setSendSoundButtonOn():void {
+            sendSoundButton.source = sendSoundIcon;
+            sendSoundButton.toolTip = Language.s.sendWakeUpSound;
+        }
+        
+        private function setSendSoundButtonOff():void {
+            sendSoundButton.source = stopSoundIcon;
+            sendSoundButton.toolTip = Language.s.stopWakeUpSound;
+        }
+        
+        private function getSecondsFromAlarmText(text:String):int {
+            if( text == null ) {
+                return 0;
+            }
+            
+            var secondsText:String = text.substring(0,(text.length - 2));
+            var seconds:int = parseInt(secondsText);
+            return seconds;
+        }
+        
+        public function playSound(message:String):void {
+            if( ! isSoundOn ) {
+                return;
+            }
+            
+            var soundInfo:Array = message.split("]:");
+            var messagePart:String = soundInfo[1];
+            var soundInfo2:Array = messagePart.split(":");
+            
+            var soundFileName:String = soundInfo2[0];
+            var seconds:int = getSecondsFromAlarmText(soundInfo2[1]);
+            
+            soundFileName = Config.getInstance().getUrlString(soundFileName);
+            Log.logging("soundFileName", soundFileName);
+            
+            playSoundLater(soundFileName, seconds);
+        }
+        
+        private function playSoundLater(soundFileName:String, seconds:int):void {
+            var timer : Timer = new Timer(seconds * 1000, 1);
+            
+            timer.addEventListener(TimerEvent.TIMER, function(event:TimerEvent) : void {
+                    stopSound();
+                    setSendSoundButtonOff();
+                    
+                    var sound:Sound = new Sound( new URLRequest(soundFileName) );
+                    soundChannel = sound.play(0, 1);
+                    soundChannel.addEventListener(Event.SOUND_COMPLETE,
+                                                  soundCompleteHandler);
+                });
+            timer.start();
+        }
+        
+        private function soundCompleteHandler(event:Event):void {
+            sendOrStopSound();
+        }
+    
+        //親コンポーネントへのイベント通知をブロックしたい場合に以下の関数を呼び出す。
+        private function blockEvent(event:MouseEvent):void {
+            event.stopPropagation();
+        }
+        
+        
+        public function setSoundState(b:Boolean):void {
+            isSoundOn = b;
+            setSoundStateImage();
+        }
+        
+        private function changeSoundState():void {
+            setSoundState( ! isSoundOn );
+        }
+        
+        private function setSoundStateImage():void {
+            if( isSoundOn ) {
+                soundStatusImage.source = soundOnIcon;
+                soundStatusImage.toolTip = Language.s.soundOn;
+            } else {
+                soundStatusImage.source = soundOffIcon;
+                soundStatusImage.toolTip = Language.s.soundOff;
+            }
+        }
+        
+        public function isTalkMode(targetChannel:int):Boolean {
+            var box:ChatMessageLogBox = getChatChannle(targetChannel);
+            return (box.icon != null);
+        }
+        
+        private function setTalkMode():void {
+            var channel:int = getSelectedChatChannleIndex();
+            var box:ChatMessageLogBox = getChatChannle(channel);
+            
+            if( box.icon == null ) {
+                box.icon = talkIcon;
+            } else {
+                box.icon = null;
+            }
+            setTalkButton();
+        }
+        
+        private function setTalkButton():void {
+            var channel:int = getSelectedChatChannleIndex();
+            
+            if( isTalkMode(channel) ) {
+                talkButton.source = talkIcon;
+                talkButton.toolTip = Language.s.talkTextOn;
+            } else {
+                talkButton.source = talkSilentIcon;
+                talkButton.toolTip = Language.s.talkTextOff;
+            }
+        }
+        
+        public function setStandingGraphicsDisplayState(b:Boolean):void {
+            standingGraphics.setDisplayState( b );
+            refreshChatCharacterName();
+        }
+    
+        private function setChatFontWindow():void {
+            var chatFontWindow:ChatFontWindow = DodontoF.popup(ChatFontWindow, true) as ChatFontWindow;
+            chatFontWindow.init(this, chatFontColor, chatBackgroundColor, chatFontSize, 
+                                isDisplayTime, isDisplayOtherChannel, isChatChannelColored);
+        }
+    
+        public function setChatFontColor(color:String):void {
+            if( color == null ) {
+                return;
+            }
+            chatFontColor = color;
+            chatMessageBase.setStyle('color', '0x' + color);
+        }
+    
+        public function getChatBackgroundColor():String {
+            return chatBackgroundColor;
+        }
+        
+        public function setChatBackgroundColor(color:String, isInitSetting:Boolean = false):void {
+            if(color == null) {
+                return;
+            }
+            
+            chatBackgroundColor = color;
+            eachChatChannel(function(i:ChatMessageLogBox):void { i.setBackGroundColor(color); });
+            chatMessageInput.setStyle('backgroundColor', '0x' + color);
+            novelticMode.setChatBackgroundColor(color);
+            
+            if( isInitSetting ) {
+                return;
+            }
+            
+            DodontoF_Main.getInstance().getChatPaletteWindow().setChatBackgroundColor(color);
+        }
+        
+        public function getPublicChatMessageLogList():Array {
+            return publicChatChannelBox.getChatMessageLogList();
+        }
+        
+        public function clearPublicChatMessageLog():void {
+            publicChatChannelBox.clearChatMessageLog();
+        }
+        
+        public function addChatLogText(channel:int):Boolean {
+            var isCurrentChannel:Boolean = (channel == getSelectedChatChannleIndex());
+            var isAdded:Boolean = getChatChannle(channel).addChatLogText(novelticMode, isCurrentChannel, isFirstLoadFinished);
+            if( ! isAdded ) {
+                return false;
+            }
+            
+            if( ! isCurrentChannel ) {
+                if( getChatChannle(channel).isNoCheckCountingMode() ) {
+                    chatMessageLogBoxTab.getTabAt(channel).styleName = "nocheckTabStyle";
+                }
+            }
+            return true;
+        }
+        
+        private function openDiceBotHelp():void {
+            var window:DiceBotHelpWindow = DodontoF.popup(DiceBotHelpWindow, true) as DiceBotHelpWindow;
+        }
+        
+        public function manageDiceBotTable():void {
+            var window:ManageBotTableWindow = DodontoF.popup(ManageBotTableWindow, true) as ManageBotTableWindow;
+        }
+        
+        
+        public function changeNovelticMode():void {
+            var toChangeModeName:String = (novelticMode.isNovelticModeOn() ? 
+                                           Language.s.nomalChatLogDisplayMode :
+                                           Language.s.novelticChatDisplayMode);
+            var message:String = Language.text("changeChatLogDisplayModeQuestion", toChangeModeName);
+            
+            var changeFunction:Function = function(e : CloseEvent) : void {
+                if (e.detail != Alert.OK) {
+                    return;
+                }
+                novelticMode.changeNovelticMode();
+            }
+            
+            Alert.show(message,
+                       Language.s.changeChatLogDisplayModeQuestionTitle, 
+                       (Alert.OK | Alert.CANCEL),
+                       null, 
+                       changeFunction);
+        }
+        
+        private function visibleSecretTalk():void {
+            nameBox.removeChild(secretTalkButton);
+            sendtoBox.visible = true;
+            sendtoBox.width = 100;
+        }
+        
+        
+        private function changeSendtoBox():void {
+            changeWindowStyle();
+        }
+        
+        
+        private var defaultWindowColor:String = "#F4FBFF";
+        private var secretSendtoWindowColor:String = "#FFFF99";
+        private var visiterModeWindowColor:String = "#FFFFCC";
+        
+        static public function get windowColorsDefault():Array {
+            return ["#F4FBFF"];
+        }
+        
+        static public function get windowColorsColored():Array {
+            return ["#F4FBFF",
+                    "#999999",  //Infra-Red
+                    "#FF9999",  //Red
+                    "#FF9900",  //Orange
+                    "#FFFF99",  //Yellow
+                    "#66CC99",  //Green
+                    "#33CCCC",  //Blue
+                    "#0099CC",  //Indigo
+                    "#6666CC"]; //Violet
+        //                                     "#FFFFFF"]; //Ultra-Violet
+        /*
+          "#EEEEEE",  //Infra-Red
+          "#FFFBFB",  //Red
+          "#FFF4E3",  //Orange
+          "#FFFFEC",  //Yellow
+          "#ECFFEC",  //Green
+          "#E3FCFF",  //Blue
+          "#ECECFF",  //Indigo
+          "#F8ECFF",  //Violet
+          "#FFFFFF"]; //Ultra-Violet
+        */
+        }
+
+        static private function getWindowColors(b:Boolean):Array {
+            if( b ) {
+                return windowColorsColored;
+            } else {
+                return windowColorsDefault;
+            }
+        }
+        
+        public function changeWindowStyle():void {
+            if( isVisiterMode() ) {
+                changeWindowColorAndTitle(Language.s.visitorMode, visiterModeWindowColor);
+                return;
+            }
+            
+            if( sendtoBox.selectedItem != null && sendtoBox.selectedItem.data != null ) {
+                changeWindowColorAndTitle(sendtoBox.selectedItem.label, secretSendtoWindowColor);
+                return;
+            }
+            
+            var index:int = getSelectedChatChannleIndex();
+            var color:String = getChannelColor(index);
+            changeWindowColorAndTitle("", color);
+        }
+        
+        
+        public function getChannelColor(index:int):String {
+            return getChannelColorByColored(index, isChatChannelColored);
+        }
+        
+        static public function getChannelColorByColored(index:int, isColored:Boolean):String {
+            var colors:Array = getWindowColors(isColored);
+            
+            var max:int = colors.length;
+            index = index % max;
+            
+            var color:String = colors[index];
+            return color;
+        }
+        
+        
+        public function changeLogVisible(event:MouseEvent, visible:Boolean):void {
+            novelticMode.setLogVisible(event, visible);
+        }
+        
+        private function changeWindowColorAndTitle(titleTail:String, color:String):void {
+            var titleString:String = Language.s.chatWindowTitle;
+            if( titleTail != "" ) {
+                titleString += (" -> " + titleTail);
+            }
+            this.title = titleString;
+            
+            setStyle("backgroundColor", color);
+        }
+        
+        
+        private var preDataProvider:Array = [];
+        
+        public function updateChatWindowSendtoBox(loginUserInfo:Array):void {
+            var selected:String = getSendtoBoxSelectedString();
+            var dataProvider:Array = getSendtoDataProvider(loginUserInfo);
+            
+            Log.logging("preDataProvider", preDataProvider);
+            Log.logging("dataProvider", dataProvider);
+            
+            if( Utils.isEqual(preDataProvider, dataProvider) ) {
+                Log.logging("dataProvider is no changed");
+                return;
+            }
+            
+            Log.logging("dataProvider is changed!!!!!!");
+            
+            preDataProvider = Utils.clone(dataProvider);
+            sendtoBox.dataProvider = dataProvider;
+            Utils.selectComboBox(sendtoBox, selected);
+            
+        }
+        
+        private function getSendtoBoxSelectedString():String {
+            var selected:String = null;
+            if( sendtoBox.selectedItem != null ) {
+                selected = sendtoBox.selectedItem.data;
+            }
+            return selected;
+        }
+        
+        private function getSendtoDataProvider(loginUserInfo:Array):Array {
+            var dataProvider:Array = [];
+            
+            for(var i:int = 0 ; i < loginUserInfo.length ; i++) {
+                var userInfo:Object = loginUserInfo[i];
+                
+                var uniqueId:String = DodontoF_Main.getInstance().getStrictlyUniqueId();
+                if( userInfo.userId == uniqueId ) {
+                    continue;
+                }
+                
+                var option:Object = {
+                    label : userInfo.userName,// + ":" + userInfo.userId,
+                    data : userInfo.userId};
+                dataProvider.push(option);
+            }
+            
+            dataProvider.sort();
+            
+            var option_all:Object = {
+                label : Language.s.allMember,
+                data : null};
+            
+            dataProvider.splice(0, 0, option_all);
+            
+            return dataProvider;
+        }
+        
+        
+        public function deleteChatLog():void {
+            var announce:Function = 
+                function():void { sendSystemMessage(Language.s.deleteAllChatLogMessage) };
+            
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            
+            Utils.askByAlert(Language.s.deleteAllChatLogDeleteQuestionTitle, Language.s.deleteAllChatLogDeleteQuestion, 
+                             function():void {
+                                 Utils.askByAlert(Language.s.deleteAllChatLogDeleteQuestionTitle2, Language.s.deleteAllChatLogDeleteQuestion2, 
+                                                  function():void { guiInputSender.getSender().deleteChatLog(announce) });
+                             });
+        }
+        
+        
+        public function updateSendToCharacters():void {
+            var text:String = "";
+            
+            var characters:Array = Character.getSelectedCharacters();
+            for each (var character:Character in characters) {
+                if( text.length != 0 ) {
+                    text += "\n";
+                }
+                text += "> " + character.getName();
+            }
+            
+            sendToCharacters.text = text;
+            
+            if( text.length == 0 ) {
+                sendToCharacters.visible = false;
+                sendToCharacters.width = 0;
+            } else {
+                sendToCharacters.visible = true;
+                sendToCharacters.width = 100;
+            }
+        }
+        
+    ]]>
+  </mx:Script>
+  
+</torgtaitai:ResizableWindow>

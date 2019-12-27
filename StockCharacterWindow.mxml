@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow 
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   x="250"
+   y="50"
+   width="190"
+   height="180"
+   title="{Language.s.stockCharacterWindow}" 
+   showCloseButton="true"
+   
+   close="PopUpManager.removePopUp(this)"
+   creationComplete="setup()"
+   >
+
+  
+  <mx:Box height="20" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Label text="{characterName}" />
+  </mx:Box>
+  <mx:Box height="100%" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Box id="viewBox" height="100%" width="50" horizontalAlign="center" verticalAlign="middle">
+      <mx:Image id="view" width="50" height="50" horizontalAlign="center" verticalAlign="middle" source="{characterImageUrl}"/>
+    </mx:Box>
+    
+    <mx:HBox width="100%" horizontalAlign="center" verticalAlign="middle">
+      <mx:CheckBox width="50%" id="isMany" label="{Language.s.manyCreateCheck}" selected="false" click="setCharacterName()" />
+      <mx:HBox id="indexBox" width="50%" horizontalAlign="center" verticalAlign="middle" > <!--visible="{isMany.selected}"> -->
+        <mx:Label text="{Language.s.menyNumber}" />
+	    <mx:TextInput id="index" width="25" text="1" change="setCharacterName()" />
+      </mx:HBox>
+    </mx:HBox>
+  </mx:Box>
+
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.events.FlexEvent;
+
+    private var characterParams:Object = new Object;
+    
+    public function setParams(params:Object):void {
+        characterParams = Utils.clone(params);
+    }
+
+    [Bindable]
+    private var characterName:String = "";
+    private var characterNameBase:String = "";
+    
+    [Bindable]
+    private var characterImageUrl:String = "";
+    
+    private var characterImages:Array = new Array();
+    private var characterMirrored:Boolean = false;
+    
+    private function setup():void {
+        Log.loggingTuning("=>setup() Begin");
+        
+        CommonPopupWindow.initWindowSizeByFont18Public(250, 220, this);
+        Resizer.addResize(this, new Point(100, 100));
+        
+        statusTextField.background = true;
+        statusTextField.backgroundColor = 0xFFFFDD;
+        
+        characterNameBase = characterParams.name;
+        setCharacterName();
+        
+        characterMirrored = characterParams.mirrored;
+        
+        setEvent();
+        
+        characterImageUrl = characterParams.imageUrl;
+        characterImages = characterParams.images;
+        
+        Log.loggingTuning("=>setup() End");
+    }
+    
+    private function initPosition():void {
+        if( characterParams.mirrored ) {
+            view.scaleX = -1;
+            view.x = view.width;
+        } else {
+            view.scaleX = 1;
+            view.x = 0;
+        }
+        view.y = 0;
+    }
+    
+    
+    private function setCharacterName():void {
+        if( isMany.selected ) {
+            characterName = (characterNameBase + "_" + index.text);
+        } else {
+            characterName = characterNameBase;
+        }
+    }
+
+    private function setEvent():void {
+        setLoadEvent();
+        setDragEvent();
+    }
+    
+    private function setLoadEvent():void {
+        view.addEventListener(Event.COMPLETE, function(event:Event):void {
+                initPosition();
+            });
+    }
+    
+    private function setDragEvent():void {
+        view.addEventListener(MouseEvent.MOUSE_DOWN, function(event:MouseEvent):void {
+                view.startDrag();
+                event.stopPropagation();
+                this.status = "";
+            });
+        
+        view.addEventListener(MouseEvent.MOUSE_UP, function(event:MouseEvent):void {
+                view.stopDrag();
+                
+                var globalPoint:Point = viewBox.localToGlobal( new Point(view.x , view.y) );
+                var dropMapPoint:Point = DodontoF_Main.getInstance().getMap().getCharacterPointFromGlobalPoint(globalPoint);
+                
+                addCharacter(dropMapPoint.x, dropMapPoint.y);
+                
+                initPosition();
+            });
+    }
+
+    public function addCharacter(x:int, y:int):void {
+        try{
+            setCharacterName();
+            
+            var dogTag:String = (isMany.selected ? ("" + index.text) : "");
+            
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.addCharacter(characterName,
+                                        characterImageUrl,
+                                        characterImages,
+                                        characterMirrored,
+                                        characterParams.size,
+                                        characterParams.isHide,
+                                        characterParams.initiative,
+                                        characterParams.info,
+                                        x,
+                                        y,
+                                        dogTag,
+                                        characterParams.counters,
+                                        characterParams.statusAlias,
+                                        characterParams.url);
+            if( ! isMany.selected ) {
+                PopUpManager.removePopUp(this);
+            }
+        
+            index.text = "" + (parseInt(index.text) + 1);
+            
+            setCharacterName();
+        } catch(error:Error) {
+            this.status = error.message;
+            Log.loggingError("StockCharacterWindow.addCharacter", error);
+        }
+    }
+
+    ]]>
+  </mx:Script>
+      
+</mx:TitleWindow>

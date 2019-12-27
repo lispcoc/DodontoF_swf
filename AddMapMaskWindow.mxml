@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   x="250"
+   y="50"
+   width="330"
+   height="250"
+   title="{Language.s.addMapMask}" 
+   
+   showCloseButton="true"
+   >
+
+  
+  <mx:Box height="100%" width="200" horizontalAlign="center" verticalAlign="middle">
+    <mx:HBox height="100%" width="100%" horizontalAlign="center" verticalAlign="middle">
+      <mx:Box height="100%" width="50%" horizontalAlign="center" verticalAlign="middle">
+        <mx:Form>
+          
+	      <mx:FormItem label="{Language.s.mapMaskName}">
+            <mx:TextInput id="maskName" width="50" text=""/>
+	      </mx:FormItem>
+          
+	      <mx:FormItem label="{Language.s.color}">
+            <mx:ColorPicker id="mapMaskColorPicker" showTextField="true" selectedColor="0x000000"
+                            change="changeView()" />
+	      </mx:FormItem>
+          
+	      <mx:FormItem label="{Language.s.mapMaskHeight}">
+            <mx:NumericStepper id="mapMaskHeigth" minimum="1" maximum="100" value="3" change="changeView()" enabled="{draggable}" />
+	      </mx:FormItem>
+          
+	      <mx:FormItem label="{Language.s.mapMaskWidth}">
+            <mx:NumericStepper id="mapMaskWidth" minimum="1" maximum="100" value="3" change="changeView()" enabled="{draggable}" />
+	      </mx:FormItem>
+
+	      <mx:FormItem label="{Language.s.mapMaskAlpha}">
+            <mx:HSlider id="alphaSlider" width="70" minimum="0.2" maximum="1" value="1" enabled="{draggable}"
+                        change="view.alpha = alphaSlider.value"
+                        />
+	      </mx:FormItem>
+        </mx:Form>
+        
+        <mx:CheckBox id="isMany" label="{Language.s.manyCreateCheck}" selected="true" height="15" visible="{isCreate}" />
+        <mx:HBox id="changeExecuteSpace" height="0" width="100%" horizontalAlign="center" verticalAlign="middle" visible="{! isCreate}" >
+          <mx:Button id="changeButton" label="{Language.s.changeButton}" click="changeMapMask()" />
+          <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+        </mx:HBox>
+        
+      </mx:Box>
+      <mx:Box height="100%" width="50%" horizontalAlign="center" verticalAlign="middle" >
+        <mx:Spacer id="view" height="100%" width="100%" />
+      </mx:Box>
+    </mx:HBox>
+    
+  </mx:Box>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.events.FlexEvent;
+    
+    /**
+     * マップマスク追加画面
+     */
+    
+    [Bindable]
+    private var mapMaskCount:int = 1;
+    
+    [Bindable]
+    protected var isCreate:Boolean = true;
+    
+    [Bindable]
+    protected var draggable:Boolean = true;
+    
+    
+    /**
+     * Windowの初期化処理
+     */
+    override protected function setup():void {
+        Log.loggingTuning("=>setup() Begin");
+        
+        changeView();
+        setDragEvent();
+        setMaxMaskName();
+        
+        Log.loggingTuning("=>setup() End");
+    }
+    
+    /**
+     * マップマスクのプレビューでは一定以上大きいサイズは縮小して表示する。
+     */
+    private function changeView():void {
+        var maxLength:int = Math.max(mapMaskHeigth.value, mapMaskWidth.value);
+        
+        var maxRate:Number = 2.5;
+        var rate:Number = Math.min(maxLength * 0.5, maxRate);
+        
+        var squareLength:int = Map.getSquareLength();
+        var width:int = squareLength * mapMaskWidth.value / maxLength * rate;
+        var height:int = squareLength * mapMaskHeigth.value / maxLength * rate;
+        
+        view.graphics.clear();
+        view.graphics.lineStyle(1, getColor());
+        view.graphics.beginFill(getColor(), 1.0);
+        view.graphics.drawRect(0, 1, width, height);
+        view.graphics.endFill();
+    }
+    
+    
+    /**
+     * マップマスクのプレビュー表示部分は
+     * ドラッグ＆ドロップでマップに落とす事で追加処理となる。
+     * その処理をここで実装。
+     */
+    protected function setDragEvent():void {
+        view.addEventListener(MouseEvent.MOUSE_DOWN, function(event:MouseEvent):void {
+                view.startDrag();
+                event.stopPropagation();
+                this.status = "";
+            });
+        
+        view.addEventListener(MouseEvent.MOUSE_UP, function(event:MouseEvent):void {
+                view.stopDrag();
+            
+                var map:Map = DodontoF_Main.getInstance().getMap();
+                var globalPoint:Point = localToGlobal( new Point(view.x + 175 , view.y + 55) );
+                var mapLocalPoint:Point = map.getCharacterLayer().globalToLocal( globalPoint );
+                
+                var dropMapPoint:Point = map.getSnapViewPoint(mapLocalPoint.x, mapLocalPoint.y, Map.getSquareLength());
+                
+                Log.logging("dropMapPoint.x", dropMapPoint.x);
+                Log.logging("dropMapPoint.y", dropMapPoint.y);
+                
+                if( (dropMapPoint.x >= 0) && (dropMapPoint.y >= 0) ) {
+                    addMapMask(dropMapPoint.x, dropMapPoint.y);
+                }
+                
+                view.x = 0;
+                view.y = 0;
+            });
+    }
+    
+    /**
+     * マップマスクには「１」のように名前が数字の連番で付けられます。
+     */
+    protected function setMaxMaskName():void {
+        mapMaskCount = getMaxExistMapMaskCount() + 1;
+        maskName.text = "" + mapMaskCount;
+    }
+    
+    /** 
+     * マップマスクの名前を連番で付けるため、
+     * マップに存在する最大の部屋番号の数字をここで取得
+     */
+    private function getMaxExistMapMaskCount():int {
+        var maxNumber:int = 0;
+        
+        var mapMaskList:Array  = DodontoF_Main.getInstance().getMap().getExistPieces();
+        for(var i:int = 0 ; i < mapMaskList.length ; i++) {
+            var mapMask:MapMask = mapMaskList[i] as MapMask;
+            if( mapMask == null ) {
+                continue;
+            }
+            
+            var number:int = getNumberFromName(mapMask.getName());
+            if( maxNumber < number ) {
+                maxNumber = number
+            }
+        }
+        
+        return maxNumber;
+    }
+    
+    
+    /**
+     * 部屋の名前から部屋番号を取得する。
+     */
+    
+    private function getNumberFromName(text:String):int {
+        Log.loggingTuning("getNumberFromName text", text);
+        var result:Object = /(\d+)$/.exec(text);
+        if( result == null ) {
+            Log.loggingTuning("getNumberFromName null");
+            return 0;
+        }
+        
+        var numberString:String = result[1];
+        Log.loggingTuning("numberString", numberString);
+        var number:int = parseInt(numberString);
+        Log.loggingTuning("number", number);
+        
+        return number;
+    }
+    
+    
+    /** 
+     * 部屋の色を16進数文字列を値に変換
+     */
+    private function getColor():int {
+        return parseInt("0x" + mapMaskColorPicker.selectedColor.toString(16));
+    }
+    
+    
+    /**
+     * マップマスクの変更処理。
+     * 変更処理画面でオーバーライドするために定義だけしておく。
+     */
+    public function changeMapMask():void {
+    }
+    
+    /** 
+     * マップマスク追加処理
+     */
+    public function addMapMask(x:int, y:int):void {
+        try{
+            Log.logging("addMapMask called");
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.addMapMask(mapMaskWidth.value,
+                                      mapMaskHeigth.value,
+                                      maskName.text, 
+                                      getColor(),
+                                      alphaSlider.value,
+                                      x,
+                                      y);
+            if( ! isMany.selected ) {
+                PopUpManager.removePopUp(this);
+            }
+            mapMaskCount++;
+            maskName.text = "" + mapMaskCount;
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

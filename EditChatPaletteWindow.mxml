@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="500"
+   height="350"
+   title="{Language.s.eitChatPaletteWindow}" 
+   showCloseButton="true"
+   >
+  
+  <mx:HBox height="30" width="100%" >
+    <mx:Label text="{Language.s.chatPaletteText}" />
+    <mx:Spacer width="100%" />
+    <mx:Button id="helpSpace" label="？" click="Alert.show(getHelpMessage())"/>
+  </mx:HBox>
+  <mx:TextArea id="lines" text="" width="100%" height="100%"/>
+  
+  <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button id="executeButton" label="{Language.s.chatPaletteEditButton}" click="execute()" />
+    <mx:Button label="{Language.s.cancelButton}" click="PopUpManager.removePopUp(this)" />
+  </mx:HBox>
+
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.events.FlexEvent;
+    import mx.controls.Alert;
+    
+    static private var spliter:String = "\r";
+    
+    private var editFunction:Function = null;
+    
+    public function initParams(array:Array, func:Function):void {
+        lines.text = array.join( spliter );
+        editFunction = func;
+    }
+    
+    override protected function setup():void {
+        setHelpMessage();
+    }
+    
+    private function getHelpMessage():String {
+        var message:String = Language.s.howToUseChatPallet_1
+        + Language.s.howToUseChatPallet_2
+        + Language.s.howToUseChatPallet_3
+        + Language.s.howToUseChatPallet_4
+        + Language.s.howToUseChatPallet_5
+        + Language.s.howToUseChatPallet_6
+        + Language.s.howToUseChatPallet_7
+        + Language.s.howToUseChatPallet_8
+        + Language.s.howToUseChatPallet_9
+        + Language.s.howToUseChatPallet_10
+        + Language.s.howToUseChatPallet_11
+        + Language.s.howToUseChatPallet_12;
+        
+        return message;
+    }
+        
+    private function setHelpMessage():void {
+        helpSpace.toolTip = getHelpMessage();
+    }
+    
+    public function execute():void {
+        editChatPalette();
+    }
+    
+    private function editChatPalette():void {
+        try{
+            var text:String = lines.text.replace(/\r+$/, '');
+            editFunction( text.split(spliter) );
+            
+            PopUpManager.removePopUp(this);
+        } catch(error:Error) {
+            this.status = error.message;
+        }
+    }
+    
+    ]]>
+  </mx:Script>
+  
+</torgtaitai:CommonPopupWindow>

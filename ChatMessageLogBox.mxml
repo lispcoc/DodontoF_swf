@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml"
+        xmlns:torgtaitai="*" 
+        width="100%" height="100%"
+        paddingTop="0"
+        paddingBottom="0" 
+        borderStyle="solid"
+        backgroundColor="#FFFFFF"
+        verticalGap="0"
+        verticalScrollPolicy="on"
+        creationComplete="setup();"
+      >
+<!--
+        updateComplete="updateCompleteAction();"
+        scroll="setScrollPosition(event)"
+-->
+  <mx:Script>
+    <![CDATA[
+
+        import mx.controls.Text;
+        import mx.events.ScrollEvent;
+        
+        private var chatBlockMaxTextCount:int = 5000;
+        private var textBlockList:Array = new Array();
+        private var lastText:Text = new Text();
+        private var checkNovelModeFlag:Boolean = false;
+        private var nocheckCount:int = 0;
+        private var defaultLabel:String = null;
+        private var buffer:Array = new Array();
+        private var chatLogList:Array = new Array();
+        static private var allChatLogList:Array = new Array();
+        private var chatFontSize:int = 11;
+        private var channel:int = 0;
+        
+        public function setChannel(channel_:int):void {
+            this.channel = channel_;
+        }
+        
+        public function getChannel():int {
+            return this.channel;
+        }
+        
+        public function init(novelticMode:NovelticMode):void {
+            defaultLabel = this.label;
+            printLabelCount();
+            
+            this.setLastText( novelticMode );
+        }
+        
+        public function setLabel(text:String):void {
+            defaultLabel = text;
+            printLabelCount();
+        }
+        
+        public function getDefaultLabel():String {
+            return defaultLabel;
+        }
+        
+        public function getChatLogList():Array {
+            return chatLogList;
+        }
+        
+        public function getAllChatLogList():Array {
+            return allChatLogList;
+        }
+        
+        public function addBuffer(line:String):void {
+            pushChatLogList(line);
+            
+            if( buffer.length != 0 ) {
+                line = ("<br>" + line);
+            }
+            
+            addBufferOnly(line);
+        }
+        
+        private function addBufferOnly(line:String):void {
+            buffer.push(line);
+        }
+        
+        private function pushChatLogList(message:String):void {
+            //他のチャンネルのログは保存しない。
+            if( message.indexOf( ChatMessageTrader.otherChannelPrefix ) == 0 ) {
+                return;
+            }
+            
+            chatLogList.push(message);
+            
+            var allMessage:String = "[" + getDefaultLabel() + "]" + message;
+            allChatLogList.push( allMessage );
+        }
+        
+        public function checkNovelMode():void {
+            checkNovelModeFlag = true;
+        }
+        
+        public function setBackGroundColor(color:String):void {
+            this.setStyle('backgroundColor', '0x' + color);
+        }
+        
+        public function setLastText(novelticMode:NovelticMode):void {
+            lastText = createChatMessageLog(novelticMode)
+        }
+        
+        public function getLastHtmlText():String {
+            return lastText.htmlText;
+        }
+        
+        public function getChatMessageLogList():Array {
+            return textBlockList;
+        }
+        
+        public function addNewTextBlock(textBlock:Text, isAddChild:Boolean):void {
+            textBlockList.push( textBlock );
+            
+            if( isAddChild ) {
+                this.addChild( textBlock );
+            }
+        }
+        
+        public function createChatMessageLog(novelticMode:NovelticMode):Text {
+            var textArea:Text = new Text();
+            textArea.percentWidth = 100;
+            
+            var isNovelticModeOn:Boolean = false;
+            if( checkNovelModeFlag ) { 
+                if( novelticMode != null ) { 
+                    isNovelticModeOn = novelticMode.isNovelticModeOn();
+                }
+            }
+            
+            this.addNewTextBlock( textArea, ( ! isNovelticModeOn) );
+            
+            if( isNovelticModeOn ) {
+                novelticMode.addChatMessageLog( textArea );
+            }
+            
+            return textArea;
+        }
+        
+        private function clearBuffer():Array {
+            var tmpBuffer:Array = buffer;
+            buffer = new Array();
+            return tmpBuffer;
+        }
+        
+        public function setChatFontSize(size:int):void {
+            chatFontSize = size;
+        }
+        
+        public function addChatLogText(novelticMode:NovelticMode, 
+                                       isCurrentChannel:Boolean,
+                                       isFirstLoadFinished:Boolean):Boolean {
+            Log.logging("addChatLogText");
+            this.validateNow_All();
+            
+            var tmpBuffer:Array = clearBuffer();
+            
+            if( tmpBuffer.length == 0 ) {
+                return false;
+            }
+            
+            var bufferString:String = "<font size='" + chatFontSize + "'>" + tmpBuffer.join("") + "</font>";
+            
+            if( lastText.htmlText.length > chatBlockMaxTextCount ) {
+                this.setLastText( novelticMode );
+            }
+            
+            lastText.minHeight = lastText.height;
+            lastText.htmlText += bufferString
+            validateNow_All();
+            
+            if( ! isCurrentChannel ) {
+                addLabelCount(tmpBuffer.length);
+            }
+            
+            if( isFirstLoadFinished ) {
+                Log.logging("talk Text");
+                var talker:TextTalker = new TextTalker()
+                talker.setChannel(channel);
+                talker.sendTexts(tmpBuffer);
+                //new BouyomiChan().sendTexts(tmpBuffer);
+            }
+            
+            return true;
+        }
+        
+        private function addLabelCount(count:int):void {
+            if( isNoCheckCounting ) {
+                nocheckCount += count;
+            }
+            printLabelCount();
+        }
+        
+        public function resetLabelCount():void {
+            nocheckCount = 0;
+            printLabelCount();
+        }
+        
+        private function printLabelCount():void {
+            this.label = defaultLabel + "/" + nocheckCount;
+        }
+        
+        public function clearChatMessageLog():void {
+            lastText.htmlText = "";
+            
+            for(var i:int ; i < textBlockList.length ; i++) {
+                var text:Text = textBlockList[i] as Text;
+                
+                if( lastText == text ) {
+                    continue;
+                }
+                
+                try {
+                    this.removeChild(text);
+                } catch ( error:Error ) {
+                }
+            }
+        }
+        
+        private function setup():void {
+            
+        }
+        
+        
+        public function isScrollPositionBottom():Boolean {
+            var component:Box = this;
+            return (component.verticalScrollPosition == component.maxVerticalScrollPosition);
+        }
+        
+        public function validateNow_All():void {
+            lastText.validateNow();
+            this.validateNow();
+        }
+        
+        
+        /*
+        private function updateCompleteAction():void {
+            Log.logging('updateComplete');
+            if( this.verticalScrollPosition != lastVerticalScrollPosition ) {
+                this.verticalScrollPosition = lastVerticalScrollPosition;
+                Log.logging("re-set lastVerticalScrollPosition", lastVerticalScrollPosition);
+            }
+        }
+        
+        private function setScrollPosition(event:ScrollEvent):void {
+            Log.logging("setScrollPosition called");
+            lastVerticalScrollPosition = event.currentTarget.verticalScrollPosition
+            Log.logging("setScrollPosition lastVerticalScrollPosition", lastVerticalScrollPosition);
+        }
+        
+        private var lastVerticalScrollPosition:Number = 0;
+        
+        public function scrollChatBox(isForceScroll:Boolean = false):void {
+            this.validateNow_All();
+            lastVerticalScrollPosition = scrollChatBox_static(chatFontSize, this, isForceScroll);
+            Log.logging("set lastVerticalScrollPosition", lastVerticalScrollPosition);
+        }
+        */
+        
+        public function scrollChatBox(isForceScroll:Boolean = false):void {
+            this.validateNow_All();
+            scrollChatBox_static(chatFontSize, this, isForceScroll);
+        }
+        
+        static public function scrollChatBox_static(chatFontSize:int, component:Box,
+                                                    isForceScroll:Boolean = false):Number {
+            if( isScrollChatBoxState(chatFontSize, component, isForceScroll) ) {
+                component.verticalScrollPosition = component.maxVerticalScrollPosition;
+            }
+            
+            return component.verticalScrollPosition
+        }
+        
+        static private function isScrollChatBoxState(chatFontSize:int, component:Box, isForceScroll:Boolean):Boolean {
+            if( isForceScroll ) {
+                return true;
+            }
+            
+            var scrollLimit:int = (component.maxVerticalScrollPosition - getScrollLimitHeight(chatFontSize));
+            if( component.verticalScrollPosition >= scrollLimit ) {
+                return true;
+            }
+            
+            return false;
+        }
+        
+        static private function getScrollLimitHeight(chatFontSize:int):int {
+            return (chatFontSize * 30 + 100);
+        }
+        
+        
+        public function resizeChatLog(novelticMode:NovelticMode):void {
+            this.setLastText( novelticMode );
+            clearChatMessageLog();
+            
+            for(var i:int = 0 ; i < chatLogList.length ; i++) {
+                var line:String = "<br>" + chatLogList[i];
+                addBufferOnly( line );
+            }
+        }
+        
+        private var isNoCheckCounting:Boolean = true;
+        
+        public function isNoCheckCountingMode():Boolean {
+            return isNoCheckCounting;
+        }
+        
+        public function stopNoCheckCount():void {
+            isNoCheckCounting = false;
+        }
+        
+        public function startNoCheckCount():void {
+            isNoCheckCounting = true;
+        }
+        
+    ]]>
+  </mx:Script>
+  
+</mx:Box>

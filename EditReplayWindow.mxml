@@ -1,0 +1,885 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="600"
+   height="450"
+   title="{Language.s.editReplayDataWindow}" 
+   showCloseButton="true"
+   >
+  
+  
+  <mx:HBox width="100%" >
+    <mx:Button id="loadButton" label="{Language.s.loadReplayData}" click="loadReplayData();" />
+      <mx:Spacer width="10" height="10" />
+    <mx:Button id="saveButton" label="{Language.s.saveReplayData}" click="saveEditReplayData();" enabled="false" />
+    <mx:Button id="saveHtmlButton" label="{Language.s.saveReplayDataByHtmlStyle}" click="saveEditReplayDataByHtml();" enabled="false" />
+  </mx:HBox>
+  
+  <mx:TabNavigator id="tabSpace" width="100%" height="100%" >
+    <mx:Box label="{Language.s.editReplayDataLog}" width="100%" height="100%" >
+      
+      <mx:HBox width="100%" height="100%" >
+	    <mx:DataGrid id="replayDataListDisplay"
+                     width="100%"
+                     height="100%"
+                     dataProvider="{replayDataList}"
+                     editable="false"
+		             draggableColumns="true"
+                     click="clickReplayLog()"
+                     keyFocusChange="focusReplayLog(event)"
+                     sortableColumns="false"
+                     allowMultipleSelection="true"
+                     >
+	      <mx:columns>
+		    <mx:DataGridColumn headerText="index"
+                               dataField="index"
+                               textAlign="center"
+                               width="35"/>
+		    <mx:DataGridColumn headerText="{Language.s.replayDataType}"
+                               dataField="dataType"
+                               textAlign="left"
+                               width="100"/>
+		    <mx:DataGridColumn headerText="{Language.s.replayDataDetail}"
+                               dataField="detail"
+                               textAlign="left"
+                               width="300"/>
+	      </mx:columns>
+	    </mx:DataGrid>
+        
+        <mx:Box width="100" height="100%" horizontalAlign="center" verticalAlign="middle">
+          <mx:Box width="100%" height="100%" horizontalAlign="center" verticalAlign="middle">
+            <mx:Button label="{Language.s.setReplayConfig}" click="createReplayConfigItem()" width="100%" />
+<!--            <mx:Spacer width="100%" height="20" /> -->
+            <mx:Button label="{Language.s.copyReplayData}" click="copyItem()" width="100%"/>
+            <mx:Button label="{Language.s.moveReplayDataUp}" click="up()" width="100%"/>
+            <mx:Button label="{Language.s.moveReplayDataDown}" click="down()" width="100%"/>
+            <mx:Button label="{Language.s.insertReplayDataByLoad}" click="addLoadItems()" width="100%"/>
+            <mx:Button label="{Language.s.deleteButton}" click="deleteItem()" width="100%"/>
+            <mx:Button label="{Language.s.undoReplayDataDelete}" click="undoDeletedItem()" width="100%"/>
+          </mx:Box>
+        </mx:Box>
+        
+      </mx:HBox>
+      
+      <mx:HBox width="100%" height="100">
+        
+        <mx:Box width="100%" height="100">
+          <mx:HBox width="100%" >
+            <mx:TextInput id="nameEditor" text="" width="50%" change="changeChatMessage()" />
+            <mx:ComboBox id="stateEditor" text="" width="50%" change="changeChatMessage()" />
+            <mx:ColorPicker id="colorEditor" showTextField="true" selectedColor="0x000000" change="changeColor();changeChatMessage()" />
+            <mx:NumericStepper id="channelSpinner" minimum="0" value="0" />
+            <mx:Spacer id="imageSpacer" width="100" />
+          </mx:HBox>
+          <mx:Box id="chatMessageBase" width="100%" height="100%" >
+            <mx:TextArea id="messageEditor"  text="" width="100%" height="100%" editable="true" change="changeChatMessage()" />
+          </mx:Box>
+        </mx:Box>
+
+        <mx:Image id="previewImage"
+                  verticalAlign="middle"
+                  horizontalAlign="center"
+                  height="100"
+                  width="0"
+                  />
+        
+      </mx:HBox>
+      
+      <!-- <mx:TextArea id="jsonDataEditor" text="" width="100%" height="100" /> -->
+      <mx:TextArea id="logEditor" text="" width="100%" height="0" visible="false" editable="true" />
+      
+    </mx:Box>
+    
+    <mx:Box label="{Language.s.bulkChangeReplayDataImage}" width="100%" height="100%" >
+      
+	  <mx:DataGrid id="imageListDisplay"
+                   width="100%"
+                   height="100%"
+                   dataProvider="{imageList}"
+                   editable="false"
+		           draggableColumns="true"
+                   sortableColumns="true"
+                   click="clickImageList()"
+                   >
+	    <mx:columns>
+		  <mx:DataGridColumn headerText="{Language.s.replayDataInfo}"
+                             dataField="info"
+                             textAlign="center"
+                             width="20"/>
+		  <mx:DataGridColumn headerText="{Language.s.replayDataImageFileName}"
+                             dataField="source"
+                             textAlign="left"
+                             width="100"/>
+	    </mx:columns>
+	  </mx:DataGrid>
+      
+      <mx:HBox width="100%" height="100" >
+        
+      <mx:Box width="100%" height="100"
+              verticalAlign="middle"
+              horizontalAlign="center"
+              >
+        <mx:TextInput id="imageSourceEditor" text="" width="100%" editable="false" />
+        <mx:Button label="↑"  click="changeImageSource()" />
+        <mx:TextArea id="imageSourceEditorChanged" text="" height="100%" width="100%" />
+      </mx:Box>
+      
+      <mx:Image id="previewForImageList"
+                verticalAlign="middle"
+                horizontalAlign="center"
+                height="100"
+                width="100"
+                />
+      </mx:HBox>
+      
+    </mx:Box>
+  </mx:TabNavigator>
+    
+  <mx:Script>
+    <![CDATA[
+    [Bindable]
+    private var imageList:ArrayCollection = new ArrayCollection();
+    [Bindable]
+    private var replayDataList:ArrayCollection = new ArrayCollection();
+    private var standingGraphics:StandingGraphics = new StandingGraphics();
+    private var baseFileName:String = "DodontoF_PlayRecord_";
+    private var targetIndex:int = -1;
+    
+    import mx.collections.SortField;
+    import mx.collections.Sort;
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.collections.ArrayCollection;
+    import mx.controls.Alert;
+    import mx.events.CloseEvent;
+    import mx.events.DataGridEvent;
+    import mx.core.IFlexDisplayObject;
+    import mx.events.DataGridEvent;
+    import flash.events.FocusEvent;
+    
+    
+    
+    public function addLoadItems():void {
+        if( targetIndex == -1 ) {
+            return;
+        }
+        
+        DodontoF_Main.getInstance().getReplay().loadReplayData( this.addLoadData );
+    }
+    
+    public function addLoadData(data:ByteArray, fileName:String):void {
+        if( targetIndex == -1 ) {
+            return;
+        }
+        
+        var dataString:String = data.toString();
+        var historyLocal:Array = SharedDataReceiver.getJsonDataFromString(dataString) as Array;
+        setHistory(historyLocal, (targetIndex - 1));
+    }
+    
+    
+    
+    public function loadReplayData():void {
+        DodontoF_Main.getInstance().getReplay().loadReplayData( this.loadData );
+    }
+    
+    public function loadData(data:ByteArray, fileName:String):void {
+        var dataString:String = data.toString();
+        var historyLocal:Array = SharedDataReceiver.getJsonDataFromString(dataString) as Array;
+        setHistory(historyLocal);
+        setBaseFileName(fileName);
+        
+        saveButton.enabled = true;
+        saveHtmlButton.enabled = true;
+    }
+    
+    private function setBaseFileName(fileName:String):void {
+        var index:int = fileName.lastIndexOf(".");
+        if( index != -1 ) {
+            baseFileName = fileName.substring(0, index) + "_";
+        }
+    }
+    
+    private function getReplayData(jsonData:Object):Object {
+        var replayData:Object = {
+            "index" : -1,
+            "dataType" : "",
+            "detail" : "",
+            "jsonData" : jsonData
+        }
+        return replayData;
+    }
+    
+    public function setHistory(historyOriginal:Array, startIndex:int = 0):void {
+        Log.logging("setHistory historyOriginal", historyOriginal);
+        
+        var prePosition:Number = replayDataListDisplay.verticalScrollPosition;
+        
+        var replayEditor:ReplayEditor = new ReplayEditor();
+        replayEditor.setHistory(historyOriginal);
+        replayEditor.startEdit();
+        
+        var history:Array = replayEditor.getHistory();
+        for(var i:int = 0 ; i < history.length ; i++) {
+            var replayData:Object = getReplayData(history[i]);
+            replayDataList.addItemAt(replayData, startIndex);
+            startIndex++;
+        }
+        
+        printHistory();
+        setVerticalScrollPosition(prePosition, replayDataListDisplay);
+    }
+    
+    private function showAllSourceFromCharacters(characters:Array):void {
+        
+        for(var i:int = 0 ; i < characters.length ; i++) {
+            var characterData:Object = characters[i];
+            
+            if( characterData.type == Character.getTypeStatic() ) {
+                addImageList(characterData, "imageName", Language.s.replayEditCharacterName + characterData.name);
+            }
+        }
+    }
+    
+    private function showAllSourceFromEffects(effects:Array):void {
+        for(var i:int = 0 ; i < effects.length ; i++) {
+            var effectData:Object = effects[i];
+            if( effectData.type == StandingGraphics.getTypeStatic() ) {
+                addImageList(effectData, "source", Language.s.replayEditStandingGraphic + effectData.name + ":" + effectData.state);
+            } else {
+                addImageList(effectData, "source", Language.s.replayEditCutIn + effectData.message );
+            }
+        }
+    }
+    
+    private function showAllSourceFromMap(mapData:Object):void {
+        addImageList(mapData, "imageSource", Language.s.replayEditMapImage + mapData.imageSource);
+    }
+    
+    private function addImageList(data:Object, key:String, info:String):void {
+        var resource:Object = {
+            "data" : data,
+            "key"  : key};
+        
+        var source:String = data[key];
+        
+        for(var i:int = 0 ; i < imageList.length ; i++) {
+            var imageInfo:Object = imageList.getItemAt(i);
+            if( imageInfo.source != source ) {
+                continue;
+            }
+            
+            if( imageInfo.info!= info ) {
+                continue;
+            }
+            
+            imageInfo.resources.push( resource );
+            return;
+        }
+        
+        var imageInfo2:Object = {
+            "source" : source,
+            "info" : info,
+            "resources" : [resource]
+        }
+        imageList.addItem(imageInfo2);
+    }
+    
+    private function showAllSource():void {
+        imageList.removeAll();
+        
+        for(var i:int = 0 ; i < replayDataList.length ; i++) {
+            var replayData:Object = replayDataList[i];
+            var jsonData:Object = replayData.jsonData;
+            
+            if( jsonData.characters != null ) {
+                showAllSourceFromCharacters(jsonData.characters);
+            } else if( jsonData.effects != null ) {
+                showAllSourceFromEffects(jsonData.effects);
+            } else if( jsonData.mapData != null ) {
+                showAllSourceFromMap(jsonData.mapData);
+            }
+        }
+        
+        sortImageList();
+    }
+    
+    private function sortImageList():void {
+        var dataSortField:SortField = new SortField();
+        dataSortField.name = "info";
+        dataSortField.numeric = false;
+        
+        var numericDataSort:Sort = new Sort();
+        numericDataSort.fields = [dataSortField];
+        
+        imageList.sort = numericDataSort;
+        imageList.refresh();
+    }
+    
+    public function saveEditReplayDataByHtml():void {
+        var chatLogList:Array = new Array();
+        
+        for(var i:int = 0 ; i < replayDataList.length ; i++) {
+            var jsonData:Object = replayDataList[i].jsonData;
+            var chatInfo:Object = getChatInfo(jsonData);
+            if( chatInfo == null ) {
+                continue;
+            }
+            
+            chatInfo.message = ChatMessageTrader.escapeHtml(chatInfo.message);
+            chatInfo.name = ChatMessageTrader.escapeHtml(chatInfo.name);
+            chatInfo.channel = chatInfo.channel;
+            
+            var separator:String = ChatMessageTrader.getChatMessageSeparator();
+            
+            var messageLine:String = 
+                "<font color='#" + chatInfo.color + "'>"
+                + "<b>" + chatInfo.name + "</b>" + separator
+                + chatInfo.message + "</font>";
+            
+            chatLogList.push( messageLine );
+        }
+        
+        var isHtmlFormat:Boolean = true;
+        var channelName:String = "";
+        SaveChatLogWindow.saveChatLogByChatLogList(chatLogList, isHtmlFormat, channelName);
+    }
+    
+    public function saveEditReplayData():void {
+        printHistory();
+        
+        var history:Array = new Array();
+        for(var i:int = 0 ; i < replayDataList.length ; i++) {
+            var replayData:Object = replayDataList[i];
+            history.push( replayData.jsonData );
+        }
+        DodontoF_Main.getInstance().saveHistory(history, baseFileName);
+    }
+    
+    public function printHistory(index:int = -1):void {
+        var prePosition:Number = replayDataListDisplay.verticalScrollPosition;
+        
+        for(var i:int = 0 ; i < replayDataList.length ; i++) {
+            if( (index == -1) || (index == i ) ) {
+                var replayData:Object = replayDataList[i];
+                
+                tuneHistoryInfo(replayData.jsonData, i);
+                
+                var info:Object = getHistoryInfo(replayData.jsonData);
+                replayData.dataType = info.dataType;
+                replayData.detail = info.detail;
+                replayData.index = i;
+            }
+        }
+        
+        var replayDataListTmp:ArrayCollection = replayDataList;
+        replayDataList = null;
+        replayDataList = replayDataListTmp;
+        
+        setVerticalScrollPosition(prePosition, replayDataListDisplay);
+        
+        if( index == -1 ) {
+            showAllSource();
+        }
+    }
+    
+    private function setVerticalScrollPosition(prePosition:Number, display:DataGrid):void {
+        if( prePosition >= display.maxVerticalScrollPosition ) {
+            prePosition = display.maxVerticalScrollPosition;
+        }
+        display.verticalScrollPosition = prePosition;
+    }
+    
+    private function tuneHistoryInfo(jsonData:Object, index:int):void {
+        if( jsonData.chatMessageDataLog ) {
+            jsonData.chatMessageDataLog[0][0] = index;
+        }
+    }
+    
+    private function getHistoryInfo(jsonData:Object):Object {
+        var result:Object = {
+            "dataType" : "undef",
+            "detail"   : ""
+        };
+        
+        if( jsonData.characters ) {
+            result.dataType = Language.s.replayEditCharacterOrCardData;
+        }
+        if( jsonData.record ) {
+            result.dataType = Language.s.replayEditCharacterOrCardData;
+        }
+        if( jsonData.roundTimeData ) {
+            result.dataType = Language.s.replayEditRandData;
+        }
+        if( jsonData.effects ) {
+            result.dataType = Language.s.replayEditEffectData;
+        }
+        
+        if( jsonData.chatMessageDataLog ) {
+            result.dataType = Language.s.replayEditChatData;
+            var chatInfo:Object = getChatInfo(jsonData);
+            var detail:String = "";
+            detail = chatInfo.name;
+            if( chatInfo.state ) {
+                detail += ("(" + chatInfo.state + ")");
+            }
+            detail += "：" + chatInfo.message.replace("\r", " ").replace("\n", " ");
+            result.detail = detail;
+        }
+        
+        if( jsonData.mapData ) {
+            result.dataType = Language.s.replayEditMapData;
+        }
+        
+        if( jsonData.replayConfig ) {
+            result.dataType = Language.s.replayEditConfigData;
+            result.detail = Language.text("replaySetting",
+                                          (jsonData.replayConfig.grid ? Language.s.ON : Language.s.OFF),
+                                          (jsonData.replayConfig.position ? Language.s.ON : Language.s.OFF),
+                                          (jsonData.replayConfig.dice ? Language.s.ON : Language.s.OFF),
+                                          (jsonData.replayConfig.adjustStand ? Language.s.ON : Language.s.OFF),
+                                          (jsonData.replayConfig.sound ? Language.s.ON : Language.s.OFF));
+        }
+        
+        return result;
+    }
+    
+    override protected function setup():void {
+    }
+    
+    private function selectHistory(index:int):void {
+        targetIndex = index;
+        callLater(function():void {replayDataListDisplay.selectedIndex = targetIndex});
+    }
+    
+    private function up():void {
+        if( targetIndex == -1 ) {
+            return;
+        }
+        
+        if( targetIndex == 0 ) {
+            return;
+        }
+        
+        var item:Object = replayDataList.removeItemAt(targetIndex);
+        targetIndex--;
+        replayDataList.addItemAt(item, targetIndex);
+        
+        printHistory();
+        selectHistory( targetIndex );
+    }
+    
+    private function down():void {
+        if( targetIndex == -1 ) {
+            return;
+        }
+        
+        if( targetIndex >= (replayDataList.length - 1) ) {
+            return;
+        }
+        
+        var item:Object = replayDataList.removeItemAt(targetIndex);
+        targetIndex++;
+        replayDataList.addItemAt(item, targetIndex);
+        
+        printHistory();
+        selectHistory( targetIndex );
+    }
+    
+    private function createReplayConfigItem():void {
+        var index:int = 0;
+        var replayConfig:Object = getReplayConfig(index);
+        
+        var window:EditReplayConfigWindow = DodontoF.popup(EditReplayConfigWindow, true) as EditReplayConfigWindow;
+        window.init( replayConfig );
+        window.setResultCallBack( addReplayConfigItem );
+    }
+    
+    private function addReplayConfigItem(replayConfig:Object):void {
+        clearExistReplayConfig();
+        
+        var info:Object = {
+            "jsonData" : {
+                "replayConfig" : replayConfig
+            }
+        };
+        
+        var index:int = 0;
+        replayDataList.addItemAt(info, index);
+        
+        printHistory();
+        selectHistory(index);
+    }
+    
+    private function getReplayConfig(index:int):Object {
+        var item:Object = replayDataList.getItemAt(index);
+        if( item == null ) {
+            return null;
+        }
+        
+        if( item.jsonData == null ) {
+            return null;
+        }
+        
+        var replayConfig:Object = item.jsonData.replayConfig;
+        return replayConfig;
+    }
+    
+    private function clearExistReplayConfig():void {
+        while( true ) {
+            var index:int = 0;
+            var replayConfig:Object = getReplayConfig(index);
+            if( replayConfig == null ) {
+                return;
+            }
+            
+            replayDataList.removeItemAt(index);
+        }
+        
+    }
+    
+    private function copyItem():void {
+        if( targetIndex < 0 ) {
+            return;
+        }
+        
+        var index:int = targetIndex;
+        
+        var item:Object = replayDataList.getItemAt(index);
+        var jsonDataCopy:Object = Utils.clone(item.jsonData);
+        
+        index++;
+        
+        var replayData:Object = getReplayData(jsonDataCopy);
+        replayDataList.addItemAt(replayData, index);
+        
+        printHistory();
+        selectHistory(index);
+    }
+    
+    
+    private var deleteItemList:Array = new Array();
+    
+    private function deleteItem():void {
+        var indexeList:Array = replayDataListDisplay.selectedIndices;
+        
+        indexeList.sort(Array.NUMERIC);
+        indexeList.reverse();
+        
+        Log.logging("indexeList", indexeList);
+        
+        var itemList:Array = new Array();
+        for each(var index:int in indexeList) {
+            var item:Object = deleteOneItem(index);
+            if( item == null ) {
+                continue;
+            }
+            itemList.push(item);
+        }
+        
+        if(itemList.length == 0) {
+            return;
+        }
+        
+        deleteItemList.push(itemList);
+        
+   
+        if( targetIndex >= (replayDataList.length - 1) ) {
+            targetIndex = (replayDataList.length - 1);
+        }
+        
+        printHistory();
+        selectHistory( index );
+    }
+    
+    private function deleteOneItem(index:int):Object {
+        if( index < 0 ) {
+            return null;
+        }
+        
+        if( index >= replayDataList.length ) {
+            return null;
+        }
+        
+        var item:Object = replayDataList.removeItemAt(index);
+        
+        return item;
+    }
+    
+    private function undoDeletedItem():void {
+        Log.logging("undoDeletedItem Begin");
+        
+        if( deleteItemList.length == 0 ) {
+            return;
+        }
+        var itemList:Array = deleteItemList.pop();
+        itemList.reverse();
+        
+        var index:int = 0;
+        for each(var item:Object in itemList) {
+            index = undoDeletedOneItem(item);
+        }
+        
+        targetIndex = index;
+        printHistory();
+        
+        Log.logging("undoDeletedItem End");
+    }
+    
+    private function logging(message:String):void {
+        logEditor.text += message + "\n";
+    }
+    
+    private function undoDeletedOneItem(item:Object):int {
+        var index:int = item.index;
+        replayDataList.addItemAt(item, index);
+        return index;
+    }
+    
+    private function focusReplayLog(event:FocusEvent):void {
+        //printReplayLog(event.rowIndex);
+    }
+    
+    private function clickImageList():void {
+        var index:int = imageListDisplay.selectedIndex
+        var imageInfo:Object = imageList[index];
+        
+        var source:String = imageInfo.source;
+        imageSourceEditor.text = source;
+        imageSourceEditorChanged.text = source;
+        printImageSource(source);
+    }
+    
+    private function refreshImageList():void {
+        var prePosition:Number = imageListDisplay.verticalScrollPosition;
+        
+        var tmp_imageList:ArrayCollection = imageList;
+        imageList = null;
+        imageList = tmp_imageList;
+        
+        setVerticalScrollPosition(prePosition, imageListDisplay);
+    }
+    
+    private function printImageSource(source:String):void {
+        previewForImageList.source = Config.getInstance().getUrlString(source);
+    }
+    
+    private function changeImageSource():void {
+        var index:int = imageListDisplay.selectedIndex
+        var imageInfo:Object = imageList[index];
+        
+        imageSourceEditor.text = imageSourceEditorChanged.text;
+        
+        imageInfo.source = imageSourceEditor.text;
+        printImageSource(imageInfo.source);
+        changeResources(imageInfo);
+        refreshImageList();
+    }
+    
+    private function changeResources(imageInfo:Object):void {
+        var resources:Array = imageInfo.resources;
+        
+        for(var i:int = 0 ; i < resources.length ; i++) {
+            var resource:Object = resources[i];
+            resource.data[ resource.key ] = imageInfo.source;
+        }
+    }
+    
+    private function clickReplayLog():void {
+        this.status = "";
+        
+        targetIndex = replayDataListDisplay.selectedIndex;
+        printReplayLog(targetIndex);
+        
+/*
+        var replayData:Object = replayDataList[targetIndex];
+        var jsonData:Object = replayData.jsonData;
+        var jsonString:String = SharedDataSender.getJsonString(jsonData);
+        jsonDataEditor.text = jsonString;
+*/
+    }
+    
+    
+    public function findFromHistory(element:String):Object {
+        for(var i:int = targetIndex ; i >= 0 ; i--) {
+            var jsonData:Object = replayDataList[i].jsonData;
+            if( jsonData[element] != null ) {
+                return jsonData[element];
+            }
+        }
+        
+        return null;
+    }
+    
+    private function setStandingGraphics(targetName:String):void {
+        var effects:Array = findFromHistory("effects") as Array;
+        
+        standingGraphics.clear();
+        
+        if( effects == null ) {
+            return;
+        }
+        
+        for(var i:int = 0 ; i < effects.length ; i++) {
+            var effect:Object = effects[i];
+            if( effect.type != "standingGraphicInfos" ) {
+                continue;
+            }
+            standingGraphics.add(effect);
+        }
+    }
+    
+    private function setPreview(source:String):void {
+        if( source == null || source == "" ) {
+            previewImage.visible = false;
+            previewImage.width = 0;
+            imageSpacer.width = 100;
+            return;
+        }
+        
+        previewImage.visible = true;
+        previewImage.width = 100;
+        imageSpacer.width = 0;
+        previewImage.source = source;
+    }
+    
+    public function printState(chatInfo:Object):void {
+        if( chatInfo == null ) {
+            return;
+        }
+        
+        var stateList:Array = standingGraphics.findAllStates(chatInfo.name)
+        stateEditor.dataProvider = stateList;
+        
+        var source:String = null;
+        
+        var state:String = chatInfo.state;
+        if( state == null ) {
+            state = "";
+        } else {
+            selectState( stateEditor, chatInfo.state );
+        }
+        
+        source = standingGraphics.findTargetSource(chatInfo.name,
+                                                   state,
+                                                   chatInfo.message,
+                                                   pushCharacterFromHistory);
+        
+        source = Config.getInstance().getUrlString(source);
+        setPreview(source);
+    }
+    
+    private function pushCharacterFromHistory(infos:Array):void {
+        var characters:Array = findFromHistory("characters") as Array;
+        
+        if( characters == null ) {
+            return;
+        }
+        
+        for(var i:int = 0 ; i < characters.length ; i++) {
+            var characterData:Object = characters[i];
+            
+            if( characterData.type != Character.getTypeStatic() ) {
+                continue;
+            }
+            
+            var characterInfo:Object = {
+                "name" : characterData.name,
+                "state" : "",
+                "source" : characterData.imageName
+            };
+            infos.push(characterInfo);
+        }
+    }
+    
+    private function selectState(comboBox:ComboBox, targetName:String):void {
+        for(var i:int = 0 ; i < comboBox.dataProvider.length ; i++) {
+            var labelName:String = comboBox.dataProvider[i];
+            if( labelName != targetName ) {
+                continue;
+            }
+            comboBox.selectedIndex = i;
+        }
+    }
+    
+    private function printReplayLog(index:int):void {
+        nameEditor.text = "";
+        stateEditor.text = "";
+        colorEditor.selectedColor = 0x000000;
+        messageEditor.text = "";
+        messageEditor.enabled = false;
+        
+        var chatInfo:Object = getChatInfoFromIndex(index);
+        if( chatInfo == null ) {
+            return;
+        }
+        
+        Log.logging("chatInfo", chatInfo);
+        
+        setStandingGraphics(chatInfo.name);
+        
+        messageEditor.enabled = true;
+        nameEditor.text = chatInfo.name;
+        channelSpinner.value = chatInfo.channel;
+        printState(chatInfo);
+        colorEditor.selectedColor = parseInt("0x" + chatInfo.color);
+        changeColor();
+        
+        messageEditor.text = chatInfo.message;
+    }
+    
+    private function getChatInfoFromIndex(index:int):Object {
+        if( index < 0 ) {
+            return null;
+        }
+        
+        var jsonData:Object = replayDataList[index].jsonData;
+        var chatInfo:Object = getChatInfo(jsonData);
+        
+        return chatInfo;
+    }
+    
+    private function getChatInfo(jsonData:Object):Object {
+        if( jsonData.chatMessageDataLog == null) {
+            return null;
+        }
+        
+        var chat:Object = jsonData.chatMessageDataLog[0][1];
+        var nameString:String = chat.senderName;
+        var nameData:Object = nameString.split(/\t/);
+        
+        var chatInfo:Object = new Object();
+        chatInfo.name = nameData[0];
+        chatInfo.state = nameData[1];
+        chatInfo.color = chat.color;
+        chatInfo.message = chat.message;
+        chatInfo.channel = chat.channel;
+        
+        return chatInfo;
+    }
+    
+    private function changeColor():void {
+        chatMessageBase.setStyle('color', colorEditor.selectedColor);
+    }
+    
+    private function changeChatMessage():void {
+        var index:int = targetIndex;
+        var jsonData:Object = replayDataList[index].jsonData;
+        
+        var chat:Object = jsonData.chatMessageDataLog[0][1];
+        chat.senderName = nameEditor.text;
+        chat.channel = channelSpinner.value
+        if( stateEditor.text != "" ) {
+            chat.senderName += ("\t" + stateEditor.text);
+        }
+        chat.color = ChatFontWindow.getColor(colorEditor);
+        chat.message = messageEditor.text;
+        
+        printHistory(targetIndex);
+        selectHistory( targetIndex );
+    }
+    
+    ]]>
+  </mx:Script>
+</torgtaitai:CommonPopupWindow>

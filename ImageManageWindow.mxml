@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<torgtaitai:CommonPopupWindow
+   xmlns:mx="http://www.adobe.com/2006/mxml"
+   xmlns:torgtaitai="*" 
+   width="700"
+   height="500"
+   title="{Language.s.imageManageWindow}" 
+   showCloseButton="true"
+   >
+  <mx:Label text="{Language.s.selectDeleteImage}" />
+  
+  <torgtaitai:ImageSelecter id="imageSelecter" height="100%" width="100%" />
+  
+  <mx:Box height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Label text="{Language.s.selectDeleteImageTips}" />
+  </mx:Box>
+  
+  <mx:HBox height="30" width="100%" horizontalAlign="center" verticalAlign="middle">
+    <mx:Button id="executeButton" label="{Language.s.deleteImage}" click="this.deleteSelectedImage()" enabled="false" />
+    <mx:Button label="{Language.s.closeButton}" click="PopUpManager.removePopUp(this)" />
+  </mx:HBox>
+  <mx:Label id="result" text=""/>
+  
+  <mx:Script>
+    <![CDATA[
+    import mx.containers.TitleWindow;
+    import mx.managers.PopUpManager;
+    import mx.events.FlexEvent;
+    
+    
+    protected var imageUrlChanger:ImageUrlChanger = new ImageUrlChanger();
+    private var imageLoadCompleteCounter:int = 0;
+    private var loadedImageCount:int = 0;
+    
+    override protected function setup():void {
+        imageSelecter.setMoviewFileSelectable(true);
+        imageSelecter.setMultiSelectable(true);
+        imageSelecter.setImageClickEventFunction(imageClickEvent);
+        imageSelecter.setImageLoadCompleteFunction(imageLoadComplete);
+        imageSelecter.setDefaultTags( getDefaultTags() );
+        imageSelecter.initImage();
+    }
+    
+    protected function getDefaultTags():Array {
+        return [
+                ImageTag.getNoneTag(),
+                ImageTag.getAllTag(),
+                ];
+    }
+    
+    public function imageClickEvent(imageName:String):void {
+        executeButton.enabled = true;
+    }
+    
+    public function imageLoadComplete():void {
+    }
+    
+
+    private var imageBoxInfos:Array = new Array();
+
+    private function deleteSelectedImage():void {
+        var imageUrlList:Array = imageSelecter.getSelectedImageUrls();
+        
+        result.text = Language.s.deleting;
+        
+        try {
+            var guiInputSender:GuiInputSender = DodontoF_Main.getInstance().getGuiInputSender();
+            guiInputSender.deleteImage(imageUrlList, this.deleteSelectedImageResult);
+        } catch(error:Error) {
+            status = error.message;
+        }
+    
+    }
+    
+    public function deleteSelectedImageResult(event:Event):void {
+        Log.loggingTuning("=>deleteSelectedImageResult(event:Event) Begin");
+        try {
+            result.text = Language.s.deleteResultLoading;
+            var jsonData:Object = SharedDataReceiver.getJsonDataFromResultEvent(event);
+            result.text = jsonData.resultText;
+            imageSelecter.initImage();
+        } catch(e:Error) {
+            Log.loggingError("exception : " + e);
+        }
+        Log.loggingTuning("=>deleteSelectedImageResult(event:Event) End");
+    }
+    
+    
+    ]]>
+  </mx:Script>
+  
+</torgtaitai:CommonPopupWindow>
