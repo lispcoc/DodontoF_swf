@@ -202,11 +202,6 @@
     static private function getChatLogTextByChatLogList(chatLogList:Array,
                                                        isHtmlFormat:Boolean):String {
         var enterText:String = Utils.getEnterText();
-        
-        if( isHtmlFormat ) {
-            enterText = "<br>" + enterText;
-        }
-        
         var chatText:String = "";
         
         for(var i:int = 0 ; i < chatLogList.length ; i++) {
@@ -217,7 +212,7 @@
             }
             
             text = text.replace(/\n/g, "\r");
-            text = text.replace(/\r/g, enterText) + enterText;
+            text = "<div>" + text.replace(/\r/g, "<br>" + enterText) + "</div>" + enterText;
             
             chatText += text;
         }
